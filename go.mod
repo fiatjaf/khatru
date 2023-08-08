@@ -12,7 +12,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.1
 	github.com/lib/pq v1.10.3
 	github.com/mattn/go-sqlite3 v1.14.6
-	github.com/nbd-wtf/go-nostr v0.19.5
+	github.com/nbd-wtf/go-nostr v0.20.0
 	github.com/rs/cors v1.7.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
