@@ -1,4 +1,4 @@
-package relayer
+package khatru
 
 import (
 	"context"
@@ -6,86 +6,72 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip11"
 	"github.com/nbd-wtf/go-nostr/nip42"
-	"golang.org/x/exp/slices"
 )
 
-// TODO: consider moving these to Server as config params
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = pongWait / 2
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 512000
-)
-
-// TODO: consider moving these to Server as config params
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+// ServeHTTP implements http.Handler interface.
+func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Upgrade") == "websocket" {
+		rl.HandleWebsocket(w, r)
+	} else if r.Header.Get("Accept") == "application/nostr+json" {
+		rl.HandleNIP11(w, r)
+	} else {
+		rl.serveMux.ServeHTTP(w, r)
+	}
 }
 
-func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
+func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	store := s.relay.Storage(ctx)
-	advancedDeleter, _ := store.(AdvancedDeleter)
 
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := rl.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		s.Log.Errorf("failed to upgrade websocket: %v", err)
+		rl.Log.Printf("failed to upgrade websocket: %v\n", err)
 		return
 	}
-	s.clientsMu.Lock()
-	defer s.clientsMu.Unlock()
-	s.clients[conn] = struct{}{}
-	ticker := time.NewTicker(pingPeriod)
+	rl.clientsMu.Lock()
+	defer rl.clientsMu.Unlock()
+	rl.clients[conn] = struct{}{}
+	ticker := time.NewTicker(rl.PingPeriod)
 
 	// NIP-42 challenge
 	challenge := make([]byte, 8)
 	rand.Read(challenge)
 
 	ws := &WebSocket{
-		conn:      conn,
-		challenge: hex.EncodeToString(challenge),
+		conn:           conn,
+		Challenge:      hex.EncodeToString(challenge),
+		WaitingForAuth: make(chan struct{}),
 	}
 
 	// reader
 	go func() {
 		defer func() {
 			ticker.Stop()
-			s.clientsMu.Lock()
-			if _, ok := s.clients[conn]; ok {
+			rl.clientsMu.Lock()
+			if _, ok := rl.clients[conn]; ok {
 				conn.Close()
-				delete(s.clients, conn)
+				delete(rl.clients, conn)
 				removeListener(ws)
 			}
-			s.clientsMu.Unlock()
+			rl.clientsMu.Unlock()
 		}()
 
-		conn.SetReadLimit(maxMessageSize)
-		conn.SetReadDeadline(time.Now().Add(pongWait))
+		conn.SetReadLimit(rl.MaxMessageSize)
+		conn.SetReadDeadline(time.Now().Add(rl.PongWait))
 		conn.SetPongHandler(func(string) error {
-			conn.SetReadDeadline(time.Now().Add(pongWait))
+			conn.SetReadDeadline(time.Now().Add(rl.PongWait))
 			return nil
 		})
 
-		// NIP-42 auth challenge
-		if _, ok := s.relay.(Auther); ok {
-			ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.challenge})
+		for _, onconnect := range rl.OnConnect {
+			onconnect(ctx)
 		}
 
 		for {
@@ -97,7 +83,7 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					websocket.CloseNoStatusReceived, // 1005
 					websocket.CloseAbnormalClosure,  // 1006
 				) {
-					s.Log.Warningf("unexpected close error from %s: %v", r.Header.Get("X-Forwarded-For"), err)
+					rl.Log.Printf("unexpected close error from %s: %v\n", r.Header.Get("X-Forwarded-For"), err)
 				}
 				break
 			}
@@ -109,12 +95,6 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 			go func(message []byte) {
 				ctx = context.Background()
-				var notice string
-				defer func() {
-					if notice != "" {
-						ws.WriteJSON(nostr.NoticeEnvelope(notice))
-					}
-				}()
 
 				var request []json.RawMessage
 				if err := json.Unmarshal(message, &request); err != nil {
@@ -123,7 +103,7 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if len(request) < 2 {
-					notice = "request has less than 2 parameters"
+					ws.WriteJSON(nostr.NoticeEnvelope("request has less than 2 parameters"))
 					return
 				}
 
@@ -135,7 +115,7 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					// it's a new event
 					var evt nostr.Event
 					if err := json.Unmarshal(request[1], &evt); err != nil {
-						notice = "failed to decode event: " + err.Error()
+						ws.WriteJSON(nostr.NoticeEnvelope("failed to decode event: " + err.Error()))
 						return
 					}
 
@@ -157,89 +137,63 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
+					var ok bool
 					if evt.Kind == 5 {
-						// event deletion -- nip09
-						for _, tag := range evt.Tags {
-							if len(tag) >= 2 && tag[0] == "e" {
-								if advancedDeleter != nil {
-									advancedDeleter.BeforeDelete(ctx, tag[1], evt.PubKey)
-								}
-
-								if err := store.DeleteEvent(ctx, tag[1], evt.PubKey); err != nil {
-									reason := fmt.Sprintf("error: %s", err.Error())
-									ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: &reason})
-									return
-								}
-
-								if advancedDeleter != nil {
-									advancedDeleter.AfterDelete(tag[1], evt.PubKey)
-								}
-							}
-						}
-						return
+						err = rl.handleDeleteRequest(ctx, &evt)
+					} else {
+						err = rl.AddEvent(ctx, &evt)
 					}
-
-					ok, message := AddEvent(ctx, s.relay, &evt)
 					var reason *string
-					if message != "" {
-						reason = &message
+					if err == nil {
+						ok = true
+					} else {
+						msg := err.Error()
+						reason = &msg
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: ok, Reason: reason})
 				case "COUNT":
-					counter, ok := store.(EventCounter)
-					if !ok {
-						notice = "restricted: this relay does not support NIP-45"
+					if rl.CountEvents == nil {
+						ws.WriteJSON(nostr.NoticeEnvelope("this relay does not support NIP-45"))
 						return
 					}
 
 					var id string
 					json.Unmarshal(request[1], &id)
 					if id == "" {
-						notice = "COUNT has no <id>"
+						ws.WriteJSON(nostr.NoticeEnvelope("COUNT has no <id>"))
 						return
 					}
 
-					total := int64(0)
+					var total int64
 					filters := make(nostr.Filters, len(request)-2)
 					for i, filterReq := range request[2:] {
 						if err := json.Unmarshal(filterReq, &filters[i]); err != nil {
-							notice = "failed to decode filter"
-							return
+							ws.WriteJSON(nostr.NoticeEnvelope("failed to decode filter"))
+							continue
 						}
 
-						filter := &filters[i]
+						filter := filters[i]
 
-						// prevent kind-4 events from being returned to unauthed users,
-						//   only when authentication is a thing
-						if _, ok := s.relay.(Auther); ok {
-							if slices.Contains(filter.Kinds, 4) {
-								senders := filter.Authors
-								receivers, _ := filter.Tags["p"]
-								switch {
-								case ws.authed == "":
-									// not authenticated
-									notice = "restricted: this relay does not serve kind-4 to unauthenticated users, does your client implement NIP-42?"
-									return
-								case len(senders) == 1 && len(receivers) < 2 && (senders[0] == ws.authed):
-									// allowed filter: ws.authed is sole sender (filter specifies one or all receivers)
-								case len(receivers) == 1 && len(senders) < 2 && (receivers[0] == ws.authed):
-									// allowed filter: ws.authed is sole receiver (filter specifies one or all senders)
-								default:
-									// restricted filter: do not return any events,
-									//   even if other elements in filters array were not restricted).
-									//   client should know better.
-									notice = "restricted: authenticated user does not have authorization for requested filters."
-									return
-								}
+						for _, reject := range rl.RejectFilter {
+							if rejecting, msg := reject(ctx, filter); rejecting {
+								ws.WriteJSON(nostr.NoticeEnvelope(msg))
+								continue
+							}
+						}
+						for _, reject := range rl.RejectCountFilter {
+							if rejecting, msg := reject(ctx, filter); rejecting {
+								ws.WriteJSON(nostr.NoticeEnvelope(msg))
+								continue
 							}
 						}
 
-						count, err := counter.CountEvents(ctx, filter)
-						if err != nil {
-							s.Log.Errorf("store: %v", err)
-							continue
+						for _, count := range rl.CountEvents {
+							res, err := count(ctx, filter)
+							if err != nil {
+								ws.WriteJSON(nostr.NoticeEnvelope(err.Error()))
+							}
+							total += res
 						}
-						total += count
 					}
 
 					ws.WriteJSON([]interface{}{"COUNT", id, map[string]int64{"count": total}})
@@ -247,103 +201,85 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					var id string
 					json.Unmarshal(request[1], &id)
 					if id == "" {
-						notice = "REQ has no <id>"
+						ws.WriteJSON(nostr.NoticeEnvelope("REQ has no <id>"))
 						return
 					}
 
 					filters := make(nostr.Filters, len(request)-2)
+					eose := sync.WaitGroup{}
+					eose.Add(len(request[2:]))
+
 					for i, filterReq := range request[2:] {
 						if err := json.Unmarshal(
 							filterReq,
 							&filters[i],
 						); err != nil {
-							notice = "failed to decode filter"
-							return
-						}
-
-						filter := &filters[i]
-
-						// prevent kind-4 events from being returned to unauthed users,
-						//   only when authentication is a thing
-						if _, ok := s.relay.(Auther); ok {
-							if slices.Contains(filter.Kinds, 4) {
-								senders := filter.Authors
-								receivers, _ := filter.Tags["p"]
-								switch {
-								case ws.authed == "":
-									// not authenticated
-									notice = "restricted: this relay does not serve kind-4 to unauthenticated users, does your client implement NIP-42?"
-									return
-								case len(senders) == 1 && len(receivers) < 2 && (senders[0] == ws.authed):
-									// allowed filter: ws.authed is sole sender (filter specifies one or all receivers)
-								case len(receivers) == 1 && len(senders) < 2 && (receivers[0] == ws.authed):
-									// allowed filter: ws.authed is sole receiver (filter specifies one or all senders)
-								default:
-									// restricted filter: do not return any events,
-									//   even if other elements in filters array were not restricted).
-									//   client should know better.
-									notice = "restricted: authenticated user does not have authorization for requested filters."
-									return
-								}
-							}
-						}
-
-						events, err := store.QueryEvents(ctx, filter)
-						if err != nil {
-							s.Log.Errorf("store: %v", err)
+							ws.WriteJSON(nostr.NoticeEnvelope("failed to decode filter"))
+							eose.Done()
 							continue
 						}
 
-						// ensures the client won't be bombarded with events in case Storage doesn't do limits right
-						if filter.Limit == 0 {
-							filter.Limit = 9999999999
-						}
-						i := 0
-						for event := range events {
-							ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
-							i++
-							if i > filter.Limit {
-								break
+						filter := filters[i]
+
+						for _, reject := range rl.RejectCountFilter {
+							if rejecting, msg := reject(ctx, filter); rejecting {
+								ws.WriteJSON(nostr.NoticeEnvelope(msg))
+								eose.Done()
+								continue
 							}
 						}
 
-						// exhaust the channel (in case we broke out of it early) so it is closed by the storage
-						for range events {
+						eose.Add(len(rl.QueryEvents))
+						for _, query := range rl.QueryEvents {
+							ch, err := query(ctx, filter)
+							if err != nil {
+								ws.WriteJSON(nostr.NoticeEnvelope(err.Error()))
+								eose.Done()
+								continue
+							}
+
+							go func(ch chan *nostr.Event) {
+								for event := range ch {
+									ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
+								}
+								eose.Done()
+							}(ch)
 						}
+
+						eose.Done()
 					}
 
-					ws.WriteJSON(nostr.EOSEEnvelope(id))
+					go func() {
+						eose.Wait()
+						ws.WriteJSON(nostr.EOSEEnvelope(id))
+					}()
+
 					setListener(id, ws, filters)
 				case "CLOSE":
 					var id string
 					json.Unmarshal(request[1], &id)
 					if id == "" {
-						notice = "CLOSE has no <id>"
+						ws.WriteJSON(nostr.NoticeEnvelope("CLOSE has no <id>"))
 						return
 					}
 
 					removeListenerId(ws, id)
 				case "AUTH":
-					if auther, ok := s.relay.(Auther); ok {
+					if rl.ServiceURL != "" {
 						var evt nostr.Event
 						if err := json.Unmarshal(request[1], &evt); err != nil {
-							notice = "failed to decode auth event: " + err.Error()
+							ws.WriteJSON(nostr.NoticeEnvelope("failed to decode auth event: " + err.Error()))
 							return
 						}
-						if pubkey, ok := nip42.ValidateAuthEvent(&evt, ws.challenge, auther.ServiceURL()); ok {
-							ws.authed = pubkey
+						if pubkey, ok := nip42.ValidateAuthEvent(&evt, ws.Challenge, rl.ServiceURL); ok {
+							ws.Authed = pubkey
+							close(ws.WaitingForAuth)
 							ctx = context.WithValue(ctx, AUTH_CONTEXT_KEY, pubkey)
 							ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: true})
 						} else {
 							reason := "error: failed to authenticate"
 							ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: &reason})
 						}
-					}
-				default:
-					if cwh, ok := s.relay.(CustomWebSocketHandler); ok {
-						cwh.HandleUnknownType(ws, typ, request)
-					} else {
-						notice = "unknown message type " + typ
 					}
 				}
 			}(message)
@@ -362,7 +298,7 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			case <-ticker.C:
 				err := ws.WriteMessage(websocket.PingMessage, nil)
 				if err != nil {
-					s.Log.Errorf("error writing ping: %v; closing websocket", err)
+					rl.Log.Printf("error writing ping: %v; closing websocket\n", err)
 					return
 				}
 			}
@@ -370,31 +306,29 @@ func (s *Server) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func (s *Server) HandleNIP11(w http.ResponseWriter, r *http.Request) {
+func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	supportedNIPs := []int{9, 11, 12, 15, 16, 20, 33}
-	if _, ok := s.relay.(Auther); ok {
+	if rl.ServiceURL != "" {
 		supportedNIPs = append(supportedNIPs, 42)
 	}
-	if storage, ok := s.relay.(Storage); ok && storage != nil {
-		if _, ok = storage.(EventCounter); ok {
-			supportedNIPs = append(supportedNIPs, 45)
-		}
+	if rl.CountEvents != nil {
+		supportedNIPs = append(supportedNIPs, 45)
 	}
 
 	info := nip11.RelayInformationDocument{
-		Name:          s.relay.Name(),
-		Description:   "relay powered by the relayer framework",
-		PubKey:        "~",
-		Contact:       "~",
+		Name:          rl.Name,
+		Description:   rl.Description,
+		PubKey:        rl.PubKey,
+		Contact:       rl.Contact,
 		SupportedNIPs: supportedNIPs,
-		Software:      "https://github.com/fiatjaf/relayer",
-		Version:       "~",
+		Software:      "https://github.com/trailriver/khatru",
+		Version:       "n/a",
 	}
 
-	if ifmer, ok := s.relay.(Informationer); ok {
-		info = ifmer.GetNIP11InformationDocument()
+	for _, edit := range rl.EditInformation {
+		edit(r.Context(), &info)
 	}
 
 	json.NewEncoder(w).Encode(info)

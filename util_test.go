@@ -1,4 +1,4 @@
-package relayer
+package khatru
 
 import (
 	"context"

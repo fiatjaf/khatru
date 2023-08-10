@@ -1,4 +1,4 @@
-package relayer
+package khatru
 
 import (
 	"sync"
@@ -11,11 +11,12 @@ type WebSocket struct {
 	mutex sync.Mutex
 
 	// nip42
-	challenge string
-	authed    string
+	Challenge      string
+	Authed         string
+	WaitingForAuth chan struct{}
 }
 
-func (ws *WebSocket) WriteJSON(any interface{}) error {
+func (ws *WebSocket) WriteJSON(any any) error {
 	ws.mutex.Lock()
 	defer ws.mutex.Unlock()
 	return ws.conn.WriteJSON(any)
