@@ -248,7 +248,14 @@ func prepareQueries(filter nostr.Filter) (
 		extraFilter = &nostr.Filter{Tags: filter.Tags}
 	} else if len(filter.Tags) > 0 {
 		index = indexTagPrefix
-		queries = make([]query, len(filter.Tags))
+
+		// determine the size of the queries array by inspecting all tags sizes
+		size := 0
+		for _, values := range filter.Tags {
+			size += len(values)
+		}
+		queries = make([]query, size)
+
 		extraFilter = &nostr.Filter{Kinds: filter.Kinds}
 		i := 0
 		for _, values := range filter.Tags {
