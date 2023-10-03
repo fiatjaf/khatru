@@ -5,12 +5,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip11"
+	"github.com/puzpuzpuz/xsync/v2"
 )
 
 func NewRelay() *Relay {
@@ -23,7 +23,7 @@ func NewRelay() *Relay {
 			CheckOrigin:     func(r *http.Request) bool { return true },
 		},
 
-		clients:  make(map[*websocket.Conn]struct{}),
+		clients:  xsync.NewTypedMapOf[*websocket.Conn, struct{}](pointerHasher[websocket.Conn]),
 		serveMux: &http.ServeMux{},
 
 		WriteWait:      10 * time.Second,
@@ -61,8 +61,7 @@ type Relay struct {
 	upgrader websocket.Upgrader
 
 	// keep a connection reference to all connected clients for Server.Shutdown
-	clientsMu sync.Mutex
-	clients   map[*websocket.Conn]struct{}
+	clients *xsync.MapOf[*websocket.Conn, struct{}]
 
 	// in case you call Server.Start
 	Addr       string

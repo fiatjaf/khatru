@@ -35,9 +35,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		rl.Log.Printf("failed to upgrade websocket: %v\n", err)
 		return
 	}
-	rl.clientsMu.Lock()
-	defer rl.clientsMu.Unlock()
-	rl.clients[conn] = struct{}{}
+	rl.clients.Store(conn, struct{}{})
 	ticker := time.NewTicker(rl.PingPeriod)
 
 	// NIP-42 challenge
@@ -54,13 +52,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			ticker.Stop()
-			rl.clientsMu.Lock()
-			if _, ok := rl.clients[conn]; ok {
+			if _, ok := rl.clients.Load(conn); ok {
 				conn.Close()
-				delete(rl.clients, conn)
+				rl.clients.Delete(conn)
 				removeListener(ws)
 			}
-			rl.clientsMu.Unlock()
 		}()
 
 		conn.SetReadLimit(rl.MaxMessageSize)

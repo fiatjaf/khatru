@@ -2,7 +2,9 @@ package khatru
 
 import (
 	"context"
+	"hash/maphash"
 	"regexp"
+	"unsafe"
 )
 
 const (
@@ -23,3 +25,5 @@ func GetAuthed(ctx context.Context) string {
 	}
 	return authedPubkey.(string)
 }
+
+func pointerHasher[V any](_ maphash.Seed, k *V) uint64 { return uint64(uintptr(unsafe.Pointer(k))) }

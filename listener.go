@@ -1,29 +1,22 @@
 package khatru
 
 import (
-	"sync"
-
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/puzpuzpuz/xsync/v2"
 )
 
 type Listener struct {
 	filters nostr.Filters
 }
 
-var (
-	listeners      = make(map[*WebSocket]map[string]*Listener)
-	listenersMutex = sync.Mutex{}
-)
+var listeners = xsync.NewTypedMapOf[*WebSocket, map[string]*Listener](pointerHasher[WebSocket])
 
 func GetListeningFilters() nostr.Filters {
-	respfilters := make(nostr.Filters, 0, len(listeners)*2)
-
-	listenersMutex.Lock()
-	defer listenersMutex.Unlock()
+	respfilters := make(nostr.Filters, 0, listeners.Size()*2)
 
 	// here we go through all the existing listeners
-	for _, connlisteners := range listeners {
-		for _, listener := range connlisteners {
+	listeners.Range(func(_ *WebSocket, subs map[string]*Listener) bool {
+		for _, listener := range subs {
 			for _, listenerfilter := range listener.filters {
 				for _, respfilter := range respfilters {
 					// check if this filter specifically is already added to respfilters
@@ -40,55 +33,42 @@ func GetListeningFilters() nostr.Filters {
 				continue
 			}
 		}
-	}
+
+		return true
+	})
 
 	// respfilters will be a slice with all the distinct filter we currently have active
 	return respfilters
 }
 
 func setListener(id string, ws *WebSocket, filters nostr.Filters) {
-	listenersMutex.Lock()
-	defer listenersMutex.Unlock()
-
-	subs, ok := listeners[ws]
-	if !ok {
-		subs = make(map[string]*Listener)
-		listeners[ws] = subs
-	}
-
+	subs, _ := listeners.LoadOrCompute(ws, func() map[string]*Listener { return make(map[string]*Listener) })
 	subs[id] = &Listener{filters: filters}
 }
 
 // Remove a specific subscription id from listeners for a given ws client
 func removeListenerId(ws *WebSocket, id string) {
-	listenersMutex.Lock()
-	defer listenersMutex.Unlock()
-
-	if subs, ok := listeners[ws]; ok {
-		delete(listeners[ws], id)
+	if subs, ok := listeners.Load(ws); ok {
+		delete(subs, id)
 		if len(subs) == 0 {
-			delete(listeners, ws)
+			listeners.Delete(ws)
 		}
 	}
 }
 
 // Remove WebSocket conn from listeners
 func removeListener(ws *WebSocket) {
-	listenersMutex.Lock()
-	defer listenersMutex.Unlock()
-	delete(listeners, ws)
+	listeners.Delete(ws)
 }
 
 func notifyListeners(event *nostr.Event) {
-	listenersMutex.Lock()
-	defer listenersMutex.Unlock()
-
-	for ws, subs := range listeners {
+	listeners.Range(func(ws *WebSocket, subs map[string]*Listener) bool {
 		for id, listener := range subs {
 			if !listener.filters.Match(event) {
 				continue
 			}
 			ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
 		}
-	}
+		return true
+	})
 }

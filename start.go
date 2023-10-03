@@ -50,11 +50,10 @@ func (rl *Relay) Start(host string, port int, started ...chan bool) error {
 func (rl *Relay) Shutdown(ctx context.Context) {
 	rl.httpServer.Shutdown(ctx)
 
-	rl.clientsMu.Lock()
-	defer rl.clientsMu.Unlock()
-	for conn := range rl.clients {
+	rl.clients.Range(func(conn *websocket.Conn, _ struct{}) bool {
 		conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
 		conn.Close()
-		delete(rl.clients, conn)
-	}
+		rl.clients.Delete(conn)
+		return true
+	})
 }
