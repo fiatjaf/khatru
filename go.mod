@@ -54,5 +54,3 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
-
-replace github.com/fiatjaf/eventstore => /home/fiatjaf/comp/eventstore
