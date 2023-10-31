@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fiatjaf/khatru"
-	"github.com/fiatjaf/khatru/plugins/storage/sqlite3"
+	"github.com/fiatjaf/eventstore/sqlite3"
 )
 
 func main() {

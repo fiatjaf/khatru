@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fiatjaf/khatru"
-	"github.com/fiatjaf/khatru/plugins/storage/elasticsearch"
+	"github.com/fiatjaf/eventstore/elasticsearch"
 )
 
 func main() {

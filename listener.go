@@ -9,14 +9,14 @@ type Listener struct {
 	filters nostr.Filters
 }
 
-var listeners = xsync.NewTypedMapOf[*WebSocket, map[string]*Listener](pointerHasher[WebSocket])
+var listeners = xsync.NewTypedMapOf[*WebSocket, *xsync.MapOf[string, *Listener]](pointerHasher[WebSocket])
 
 func GetListeningFilters() nostr.Filters {
 	respfilters := make(nostr.Filters, 0, listeners.Size()*2)
 
 	// here we go through all the existing listeners
-	listeners.Range(func(_ *WebSocket, subs map[string]*Listener) bool {
-		for _, listener := range subs {
+	listeners.Range(func(_ *WebSocket, subs *xsync.MapOf[string, *Listener]) bool {
+		subs.Range(func(_ string, listener *Listener) bool {
 			for _, listenerfilter := range listener.filters {
 				for _, respfilter := range respfilters {
 					// check if this filter specifically is already added to respfilters
@@ -32,7 +32,9 @@ func GetListeningFilters() nostr.Filters {
 			nextconn:
 				continue
 			}
-		}
+
+			return true
+		})
 
 		return true
 	})
@@ -42,15 +44,17 @@ func GetListeningFilters() nostr.Filters {
 }
 
 func setListener(id string, ws *WebSocket, filters nostr.Filters) {
-	subs, _ := listeners.LoadOrCompute(ws, func() map[string]*Listener { return make(map[string]*Listener) })
-	subs[id] = &Listener{filters: filters}
+	subs, _ := listeners.LoadOrCompute(ws, func() *xsync.MapOf[string, *Listener] {
+		return xsync.NewMapOf[*Listener]()
+	})
+	subs.Store(id, &Listener{filters: filters})
 }
 
 // Remove a specific subscription id from listeners for a given ws client
 func removeListenerId(ws *WebSocket, id string) {
 	if subs, ok := listeners.Load(ws); ok {
-		delete(subs, id)
-		if len(subs) == 0 {
+		subs.Delete(id)
+		if subs.Size() == 0 {
 			listeners.Delete(ws)
 		}
 	}
@@ -62,13 +66,14 @@ func removeListener(ws *WebSocket) {
 }
 
 func notifyListeners(event *nostr.Event) {
-	listeners.Range(func(ws *WebSocket, subs map[string]*Listener) bool {
-		for id, listener := range subs {
+	listeners.Range(func(ws *WebSocket, subs *xsync.MapOf[string, *Listener]) bool {
+		subs.Range(func(id string, listener *Listener) bool {
 			if !listener.filters.Match(event) {
-				continue
+				return true
 			}
 			ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
-		}
+			return true
+		})
 		return true
 	})
 }

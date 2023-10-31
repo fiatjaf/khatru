@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/fiatjaf/eventstore/lmdbn"
 	"github.com/fiatjaf/khatru"
 	"github.com/fiatjaf/khatru/plugins"
-	"github.com/fiatjaf/khatru/plugins/storage/lmdbn"
 	"github.com/nbd-wtf/go-nostr"
 )
 
