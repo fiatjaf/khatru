@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/fiatjaf/eventstore/lmdb"
 	"github.com/fiatjaf/khatru"
-	"github.com/fiatjaf/eventstore/lmdbn"
 )
 
 func main() {
 	relay := khatru.NewRelay()
 
-	db := lmdbn.LMDBBackend{Path: "/tmp/khatru-lmdbn-tmp"}
+	db := lmdb.LMDBBackend{Path: "/tmp/khatru-lmdb-tmp"}
 	os.MkdirAll(db.Path, 0755)
 	if err := db.Init(); err != nil {
 		panic(err)

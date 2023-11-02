@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fiatjaf/eventstore/badgern"
+	"github.com/fiatjaf/eventstore/badger"
 	"github.com/fiatjaf/khatru"
 )
 
 func main() {
 	relay := khatru.NewRelay()
 
-	db := badgern.BadgerBackend{Path: "/tmp/khatru-badgern-tmp"}
+	db := badger.BadgerBackend{Path: "/tmp/khatru-badgern-tmp"}
 	if err := db.Init(); err != nil {
 		panic(err)
 	}

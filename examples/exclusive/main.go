@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fiatjaf/eventstore/lmdbn"
+	"github.com/fiatjaf/eventstore/lmdb"
 	"github.com/fiatjaf/khatru"
 	"github.com/fiatjaf/khatru/plugins"
 	"github.com/nbd-wtf/go-nostr"
@@ -15,7 +15,7 @@ import (
 func main() {
 	relay := khatru.NewRelay()
 
-	db := lmdbn.LMDBBackend{Path: "/tmp/exclusive"}
+	db := lmdb.LMDBBackend{Path: "/tmp/exclusive"}
 	os.MkdirAll(db.Path, 0755)
 	if err := db.Init(); err != nil {
 		panic(err)
