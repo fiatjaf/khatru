@@ -318,6 +318,7 @@ func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 		Description:   rl.Description,
 		PubKey:        rl.PubKey,
 		Contact:       rl.Contact,
+		Icon:          rl.IconURL,
 		SupportedNIPs: supportedNIPs,
 		Software:      "https://github.com/trailriver/khatru",
 		Version:       "n/a",

@@ -39,6 +39,7 @@ type Relay struct {
 	PubKey      string
 	Contact     string
 	ServiceURL  string // required for nip-42
+	IconURL     string
 
 	RejectEvent              []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	RejectFilter             []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
