@@ -56,3 +56,21 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		return true, "event kind not allowed"
 	}
 }
+
+func PreventTimestampsInThePast(thresholdSeconds nostr.Timestamp) func(context.Context, *nostr.Event) (bool, string) {
+	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
+		if nostr.Now()-event.CreatedAt > thresholdSeconds {
+			return true, "event too old"
+		}
+		return false, ""
+	}
+}
+
+func PreventTimestampsInTheFuture(thresholdSeconds nostr.Timestamp) func(context.Context, *nostr.Event) (bool, string) {
+	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
+		if event.CreatedAt-nostr.Now() > thresholdSeconds {
+			return true, "event too much in the future"
+		}
+		return false, ""
+	}
+}
