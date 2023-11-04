@@ -124,12 +124,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					// check signature (requires the ID to be set)
 					if ok, err := evt.CheckSignature(); err != nil {
-						reason := "error: failed to verify signature"
-						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: &reason})
+						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "error: failed to verify signature"})
 						return
 					} else if !ok {
-						reason := "invalid: signature is invalid"
-						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: &reason})
+						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "invalid: signature is invalid"})
 						return
 					}
 
@@ -139,12 +137,12 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					} else {
 						err = rl.AddEvent(ctx, &evt)
 					}
-					var reason *string
+
+					var reason string
 					if err == nil {
 						ok = true
 					} else {
-						msg := err.Error()
-						reason = &msg
+						reason = err.Error()
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: ok, Reason: reason})
 				case "COUNT":
@@ -236,6 +234,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 							go func(ch chan *nostr.Event) {
 								for event := range ch {
+									for _, ovw := range rl.OverwriteResponseEvent {
+										ovw(ctx, event)
+									}
 									ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
 								}
 								eose.Done()
@@ -273,8 +274,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							ctx = context.WithValue(ctx, AUTH_CONTEXT_KEY, pubkey)
 							ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: true})
 						} else {
-							reason := "error: failed to authenticate"
-							ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: &reason})
+							ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "error: failed to authenticate"})
 						}
 					}
 				}
