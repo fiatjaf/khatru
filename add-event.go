@@ -86,7 +86,11 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 		}
 	}
 
+	for _, ovw := range rl.OverwriteResponseEvent {
+		ovw(ctx, evt)
+	}
 	notifyListeners(evt)
+
 	return nil
 }
 

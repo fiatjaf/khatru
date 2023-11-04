@@ -236,6 +236,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 							go func(ch chan *nostr.Event) {
 								for event := range ch {
+									for _, ovw := range rl.OverwriteResponseEvent {
+										ovw(ctx, event)
+									}
 									ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
 								}
 								eose.Done()
