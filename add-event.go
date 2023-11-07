@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fiatjaf/eventstore"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -66,7 +67,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 		for _, store := range rl.StoreEvent {
 			if saveErr := store(ctx, evt); saveErr != nil {
 				switch saveErr {
-				case ErrDupEvent:
+				case eventstore.ErrDupEvent:
 					return nil
 				default:
 					errmsg := saveErr.Error()
