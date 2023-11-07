@@ -46,6 +46,8 @@ type Relay struct {
 	RejectCountFilter        []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	OverwriteDeletionOutcome []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
 	OverwriteResponseEvent   []func(ctx context.Context, event *nostr.Event)
+	OverwriteFilter          []func(ctx context.Context, filter *nostr.Filter)
+	OverwriteCountFilter     []func(ctx context.Context, filter *nostr.Filter)
 	StoreEvent               []func(ctx context.Context, event *nostr.Event) error
 	DeleteEvent              []func(ctx context.Context, event *nostr.Event) error
 	QueryEvents              []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)

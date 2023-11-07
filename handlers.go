@@ -168,12 +168,12 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 						filter := filters[i]
 
-						for _, reject := range rl.RejectFilter {
-							if rejecting, msg := reject(ctx, filter); rejecting {
-								ws.WriteJSON(nostr.NoticeEnvelope(msg))
-								continue
-							}
+						// overwrite the filter (for example, to eliminate some kinds or tags that we know we don't support)
+						for _, ovw := range rl.OverwriteCountFilter {
+							ovw(ctx, &filter)
 						}
+
+						// then check if we'll reject this filter
 						for _, reject := range rl.RejectCountFilter {
 							if rejecting, msg := reject(ctx, filter); rejecting {
 								ws.WriteJSON(nostr.NoticeEnvelope(msg))
@@ -181,6 +181,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							}
 						}
 
+						// run the functions to count (generally it will be just one)
 						for _, count := range rl.CountEvents {
 							res, err := count(ctx, filter)
 							if err != nil {
@@ -215,14 +216,25 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 						filter := filters[i]
 
-						for _, reject := range rl.RejectCountFilter {
+						// overwrite the filter (for example, to eliminate some kinds or
+						// that we know we don't support)
+						for _, ovw := range rl.OverwriteFilter {
+							ovw(ctx, &filter)
+						}
+
+						// then check if we'll reject this filter (we apply this after overwriting
+						// because we may, for example, remove some things from the incoming filters
+						// that we know we don't support, and then if the end result is an empty
+						// filter we can just reject it)
+						for _, reject := range rl.RejectFilter {
 							if rejecting, msg := reject(ctx, filter); rejecting {
 								ws.WriteJSON(nostr.NoticeEnvelope(msg))
-								eose.Done()
 								continue
 							}
 						}
 
+						// run the functions to query events (generally just one,
+						// but we might be fetching stuff from multiple places)
 						eose.Add(len(rl.QueryEvents))
 						for _, query := range rl.QueryEvents {
 							ch, err := query(ctx, filter)
