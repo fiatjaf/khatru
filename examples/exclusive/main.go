@@ -27,7 +27,7 @@ func main() {
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
 
 	relay.RejectEvent = append(relay.RejectEvent, plugins.PreventTooManyIndexableTags(10))
-	relay.RejectFilter = append(relay.RejectFilter, plugins.NoPrefixFilters, plugins.NoComplexFilters)
+	relay.RejectFilter = append(relay.RejectFilter, plugins.NoComplexFilters)
 
 	relay.OnEventSaved = append(relay.OnEventSaved, func(ctx context.Context, event *nostr.Event) {
 	})
