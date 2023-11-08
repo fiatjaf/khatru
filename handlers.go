@@ -306,7 +306,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			case <-ticker.C:
 				err := ws.WriteMessage(websocket.PingMessage, nil)
 				if err != nil {
-					rl.Log.Printf("error writing ping: %v; closing websocket\n", err)
+					if err.Error() != "use of closed network connection" {
+						rl.Log.Printf("error writing ping: %v; closing websocket\n", err)
+					}
 					return
 				}
 			}
