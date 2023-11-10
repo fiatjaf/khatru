@@ -317,7 +317,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/nostr+json")
 
 	supportedNIPs := []int{9, 11, 12, 15, 16, 20, 33}
 	if rl.ServiceURL != "" {
