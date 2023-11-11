@@ -13,20 +13,13 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 		return fmt.Errorf("event is nil")
 	}
 
-	msg := ""
-	rejecting := false
 	for _, reject := range rl.RejectEvent {
-		rejecting, msg = reject(ctx, evt)
-		if rejecting {
-			break
+		if reject, msg := reject(ctx, evt); reject {
+			if msg == "" {
+				msg = "no reason"
+			}
+			return fmt.Errorf(msg)
 		}
-	}
-
-	if rejecting {
-		if msg == "" {
-			msg = "no reason"
-		}
-		return fmt.Errorf(msg)
 	}
 
 	if 20000 <= evt.Kind && evt.Kind < 30000 {
