@@ -16,6 +16,10 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 		ovw(ctx, &filter)
 	}
 
+	if filter.Limit == 0 {
+		return
+	}
+
 	// then check if we'll reject this filter (we apply this after overwriting
 	// because we may, for example, remove some things from the incoming filters
 	// that we know we don't support, and then if the end result is an empty
