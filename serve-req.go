@@ -8,6 +8,8 @@ import (
 )
 
 func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGroup, ws *WebSocket, filter nostr.Filter) {
+	defer eose.Done()
+
 	// overwrite the filter (for example, to eliminate some kinds or
 	// that we know we don't support)
 	for _, ovw := range rl.OverwriteFilter {
@@ -46,8 +48,6 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 			eose.Done()
 		}(ch)
 	}
-
-	eose.Done()
 }
 
 func (rl *Relay) handleCountRequest(ctx context.Context, ws *WebSocket, filter nostr.Filter) int64 {
