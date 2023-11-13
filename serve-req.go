@@ -16,7 +16,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 		ovw(ctx, &filter)
 	}
 
-	if filter.Limit == 0 {
+	if filter.Limit < 0 {
 		return
 	}
 
