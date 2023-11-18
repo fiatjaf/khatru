@@ -253,7 +253,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/nostr+json")
 
-	supportedNIPs := []int{9, 11, 12, 15, 16, 20, 33}
+	supportedNIPs := []int{}
 	if rl.ServiceURL != "" {
 		supportedNIPs = append(supportedNIPs, 42)
 	}
@@ -268,7 +268,7 @@ func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 		Contact:       rl.Contact,
 		Icon:          rl.IconURL,
 		SupportedNIPs: supportedNIPs,
-		Software:      "https://github.com/trailriver/khatru",
+		Software:      "https://github.com/fiatjaf/khatru",
 		Version:       "n/a",
 	}
 
