@@ -4,12 +4,34 @@ import (
 	"context"
 
 	"github.com/nbd-wtf/go-nostr"
+	"golang.org/x/exp/slices"
 )
 
 // PreventTooManyIndexableTags returns a function that can be used as a RejectFilter that will reject
 // events with more indexable (single-character) tags than the specified number.
-func PreventTooManyIndexableTags(max int) func(context.Context, *nostr.Event) (bool, string) {
+//
+// If ignoreKinds is given this restriction will not apply to these kinds (useful for allowing a bigger).
+// If onlyKinds is given then all other kinds will be ignored.
+func PreventTooManyIndexableTags(max int, ignoreKinds []int, onlyKinds []int) func(context.Context, *nostr.Event) (bool, string) {
+	ignore := func(kind int) bool { return false }
+	if len(ignoreKinds) > 0 {
+		ignore = func(kind int) bool {
+			_, isIgnored := slices.BinarySearch(ignoreKinds, kind)
+			return isIgnored
+		}
+	}
+	if len(onlyKinds) > 0 {
+		ignore = func(kind int) bool {
+			_, isApplicable := slices.BinarySearch(onlyKinds, kind)
+			return !isApplicable
+		}
+	}
+
 	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
+		if ignore(event.Kind) {
+			return false, ""
+		}
+
 		ntags := 0
 		for _, tag := range event.Tags {
 			if len(tag) > 0 && len(tag[0]) == 1 {
