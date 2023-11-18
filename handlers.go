@@ -13,7 +13,6 @@ import (
 
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/nbd-wtf/go-nostr/nip11"
 	"github.com/nbd-wtf/go-nostr/nip42"
 )
 
@@ -252,29 +251,5 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/nostr+json")
-
-	supportedNIPs := []int{}
-	if rl.ServiceURL != "" {
-		supportedNIPs = append(supportedNIPs, 42)
-	}
-	if rl.CountEvents != nil {
-		supportedNIPs = append(supportedNIPs, 45)
-	}
-
-	info := nip11.RelayInformationDocument{
-		Name:          rl.Name,
-		Description:   rl.Description,
-		PubKey:        rl.PubKey,
-		Contact:       rl.Contact,
-		Icon:          rl.IconURL,
-		SupportedNIPs: supportedNIPs,
-		Software:      "https://github.com/fiatjaf/khatru",
-		Version:       "n/a",
-	}
-
-	for _, edit := range rl.EditInformation {
-		edit(r.Context(), &info)
-	}
-
-	json.NewEncoder(w).Encode(info)
+	json.NewEncoder(w).Encode(rl.Info)
 }

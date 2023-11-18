@@ -17,6 +17,11 @@ func NewRelay() *Relay {
 	return &Relay{
 		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
 
+		Info: &nip11.RelayInformationDocument{
+			Software: "https://github.com/fiatjaf/khatru",
+			Version:  "n/a",
+		},
+
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -34,12 +39,7 @@ func NewRelay() *Relay {
 }
 
 type Relay struct {
-	Name        string
-	Description string
-	PubKey      string
-	Contact     string
-	ServiceURL  string // required for nip-42
-	IconURL     string
+	ServiceURL string // required for nip-42
 
 	RejectEvent              []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	RejectFilter             []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
@@ -52,10 +52,12 @@ type Relay struct {
 	DeleteEvent              []func(ctx context.Context, event *nostr.Event) error
 	QueryEvents              []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
 	CountEvents              []func(ctx context.Context, filter nostr.Filter) (int64, error)
-	EditInformation          []func(ctx context.Context, info *nip11.RelayInformationDocument)
 	OnAuth                   []func(ctx context.Context, pubkey string)
 	OnConnect                []func(ctx context.Context)
 	OnEventSaved             []func(ctx context.Context, event *nostr.Event)
+
+	// editing info will affect
+	Info *nip11.RelayInformationDocument
 
 	// Default logger, as set by NewServer, is a stdlib logger prefixed with "[khatru-relay] ",
 	// outputting to stderr.

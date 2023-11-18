@@ -5,8 +5,7 @@ go 1.21.0
 require (
 	github.com/fasthttp/websocket v1.5.3
 	github.com/fiatjaf/eventstore v0.1.0
-	github.com/gobwas/ws v1.2.0
-	github.com/nbd-wtf/go-nostr v0.25.1
+	github.com/nbd-wtf/go-nostr v0.25.7
 	github.com/puzpuzpuz/xsync/v2 v2.5.1
 	github.com/rs/cors v1.7.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
@@ -30,6 +29,7 @@ require (
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
