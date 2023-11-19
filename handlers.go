@@ -116,12 +116,12 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
-					// check serialization
-					serialized := evt.Serialize()
-
-					// assign ID
-					hash := sha256.Sum256(serialized)
-					evt.ID = hex.EncodeToString(hash[:])
+					// check id
+					hash := sha256.Sum256(evt.Serialize())
+					id := hex.EncodeToString(hash[:])
+					if id != evt.ID {
+						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "invalid: id is computed incorrectly"})
+					}
 
 					// check signature (requires the ID to be set)
 					if ok, err := evt.CheckSignature(); err != nil {
