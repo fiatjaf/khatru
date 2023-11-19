@@ -1,5 +1,7 @@
 # khatru, a relay framework [![docs badge](https://img.shields.io/badge/docs-reference-blue)](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay)
 
+`author: pablof7z`
+
 [![Run Tests](https://github.com/fiatjaf/khatru/actions/workflows/test.yml/badge.svg)](https://github.com/fiatjaf/khatru/actions/workflows/test.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/fiatjaf/khatru.svg)](https://pkg.go.dev/github.com/fiatjaf/khatru)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fiatjaf/khatru)](https://goreportcard.com/report/github.com/fiatjaf/khatru)
