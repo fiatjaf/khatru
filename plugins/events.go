@@ -64,9 +64,7 @@ func PreventLargeTags(maxTagValueLen int) func(context.Context, *nostr.Event) (b
 func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Event) (bool, string) {
 	max := 0
 	min := 0
-	allowed := make(map[uint16]struct{}, len(kinds))
 	for _, kind := range kinds {
-		allowed[kind] = struct{}{}
 		if int(kind) > max {
 			max = int(kind)
 		}
@@ -86,7 +84,7 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		}
 
 		// hopefully this map of uint16s is very fast
-		if _, allowed := allowed[uint16(event.Kind)]; allowed {
+		if _, allowed := slices.BinarySearch(kinds, uint16(event.Kind)); allowed {
 			return false, ""
 		}
 		return true, "event kind not allowed"
