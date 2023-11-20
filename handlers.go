@@ -14,6 +14,7 @@ import (
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip42"
+	"github.com/rs/cors"
 )
 
 // ServeHTTP implements http.Handler interface.
@@ -21,7 +22,7 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Upgrade") == "websocket" {
 		rl.HandleWebsocket(w, r)
 	} else if r.Header.Get("Accept") == "application/nostr+json" {
-		rl.HandleNIP11(w, r)
+		cors.AllowAll().Handler(http.HandlerFunc(rl.HandleNIP11)).ServeHTTP(w, r)
 	} else {
 		rl.serveMux.ServeHTTP(w, r)
 	}
@@ -123,7 +124,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "invalid: id is computed incorrectly"})
 					}
 
-					// check signature (requires the ID to be set)
+					// check signature
 					if ok, err := evt.CheckSignature(); err != nil {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "error: failed to verify signature"})
 						return
