@@ -1,4 +1,4 @@
-package plugins
+package policies
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func rejectKind04Snoopers(ctx context.Context, filter nostr.Filter) (bool, string) {
+// RejectKind04Snoopers prevents reading NIP-04 messages from people not involved in the conversation.
+func RejectKind04Snoopers(ctx context.Context, filter nostr.Filter) (bool, string) {
 	// prevent kind-4 events from being returned to unauthed users,
 	//   only when authentication is a thing
 	if !slices.Contains(filter.Kinds, 4) {
