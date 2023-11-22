@@ -7,6 +7,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// NoComplexFilters disallows filters with more than 2 tags.
 func NoComplexFilters(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
 	items := len(filter.Tags) + len(filter.Kinds)
 
@@ -17,6 +18,7 @@ func NoComplexFilters(ctx context.Context, filter nostr.Filter) (reject bool, ms
 	return false, ""
 }
 
+// NoEmptyFilters disallows filters that don't have at least a tag, a kind, an author or an id.
 func NoEmptyFilters(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
 	c := len(filter.Kinds) + len(filter.IDs) + len(filter.Authors)
 	for _, tagItems := range filter.Tags {
@@ -26,6 +28,13 @@ func NoEmptyFilters(ctx context.Context, filter nostr.Filter) (reject bool, msg 
 		return true, "can't handle empty filters"
 	}
 	return false, ""
+}
+
+// AntiSyncBots tries to prevent people from syncing kind:1s from this relay to else by always
+// requiring an author parameter at least.
+func AntiSyncBots(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
+	return (len(filter.Kinds) == 0 || slices.Contains(filter.Kinds, 1)) &&
+		len(filter.Authors) == 0, "an author must be specified to get their kind:1 notes"
 }
 
 func NoSearchQueries(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
