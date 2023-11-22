@@ -122,6 +122,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					id := hex.EncodeToString(hash[:])
 					if id != evt.ID {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: evt.ID, OK: false, Reason: "invalid: id is computed incorrectly"})
+						return
 					}
 
 					// check signature
