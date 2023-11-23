@@ -49,6 +49,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		WaitingForAuth: make(chan struct{}),
 	}
 
+	ctx = context.WithValue(ctx, WS_KEY, ws)
+
 	// reader
 	go func() {
 		defer func() {
