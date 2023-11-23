@@ -18,8 +18,9 @@ func NewRelay() *Relay {
 		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
 
 		Info: &nip11.RelayInformationDocument{
-			Software: "https://github.com/fiatjaf/khatru",
-			Version:  "n/a",
+			Software:      "https://github.com/fiatjaf/khatru",
+			Version:       "n/a",
+			SupportedNIPs: make([]int, 0),
 		},
 
 		upgrader: websocket.Upgrader{
