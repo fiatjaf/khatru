@@ -42,20 +42,21 @@ func NewRelay() *Relay {
 type Relay struct {
 	ServiceURL string // required for nip-42
 
-	RejectEvent              []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
-	RejectFilter             []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
-	RejectCountFilter        []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
-	OverwriteDeletionOutcome []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
-	OverwriteResponseEvent   []func(ctx context.Context, event *nostr.Event)
-	OverwriteFilter          []func(ctx context.Context, filter *nostr.Filter)
-	OverwriteCountFilter     []func(ctx context.Context, filter *nostr.Filter)
-	StoreEvent               []func(ctx context.Context, event *nostr.Event) error
-	DeleteEvent              []func(ctx context.Context, event *nostr.Event) error
-	QueryEvents              []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
-	CountEvents              []func(ctx context.Context, filter nostr.Filter) (int64, error)
-	OnAuth                   []func(ctx context.Context, pubkey string)
-	OnConnect                []func(ctx context.Context)
-	OnEventSaved             []func(ctx context.Context, event *nostr.Event)
+	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
+	RejectFilter              []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
+	RejectCountFilter         []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
+	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
+	OverwriteResponseEvent    []func(ctx context.Context, event *nostr.Event)
+	OverwriteFilter           []func(ctx context.Context, filter *nostr.Filter)
+	OverwriteCountFilter      []func(ctx context.Context, filter *nostr.Filter)
+	OverwriteRelayInformation []func(ctx context.Context, r *http.Request, info nip11.RelayInformationDocument) nip11.RelayInformationDocument
+	StoreEvent                []func(ctx context.Context, event *nostr.Event) error
+	DeleteEvent               []func(ctx context.Context, event *nostr.Event) error
+	QueryEvents               []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
+	CountEvents               []func(ctx context.Context, filter nostr.Filter) (int64, error)
+	OnAuth                    []func(ctx context.Context, pubkey string)
+	OnConnect                 []func(ctx context.Context)
+	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
 
 	// editing info will affect
 	Info *nip11.RelayInformationDocument

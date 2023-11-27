@@ -256,5 +256,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/nostr+json")
-	json.NewEncoder(w).Encode(rl.Info)
+
+	info := *rl.Info
+	for _, ovw := range rl.OverwriteRelayInformation {
+		info = ovw(r.Context(), r, info)
+	}
+
+	json.NewEncoder(w).Encode(info)
 }
