@@ -8,7 +8,7 @@ import (
 
 	"github.com/fiatjaf/eventstore/lmdb"
 	"github.com/fiatjaf/khatru"
-	"github.com/fiatjaf/khatru/plugins"
+	"github.com/fiatjaf/khatru/policies"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -26,8 +26,8 @@ func main() {
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
 
-	relay.RejectEvent = append(relay.RejectEvent, plugins.PreventTooManyIndexableTags(10))
-	relay.RejectFilter = append(relay.RejectFilter, plugins.NoComplexFilters)
+	relay.RejectEvent = append(relay.RejectEvent, policies.PreventTooManyIndexableTags(10))
+	relay.RejectFilter = append(relay.RejectFilter, policies.NoComplexFilters)
 
 	relay.OnEventSaved = append(relay.OnEventSaved, func(ctx context.Context, event *nostr.Event) {
 	})
