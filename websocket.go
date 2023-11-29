@@ -11,9 +11,9 @@ type WebSocket struct {
 	mutex sync.Mutex
 
 	// nip42
-	Challenge      string
-	Authed         string
-	WaitingForAuth chan struct{}
+	Challenge       string
+	AuthedPublicKey string
+	Authed          chan struct{}
 }
 
 func (ws *WebSocket) WriteJSON(any any) error {

@@ -44,9 +44,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	rand.Read(challenge)
 
 	ws := &WebSocket{
-		conn:           conn,
-		Challenge:      hex.EncodeToString(challenge),
-		WaitingForAuth: make(chan struct{}),
+		conn:      conn,
+		Challenge: hex.EncodeToString(challenge),
+		Authed:    make(chan struct{}),
 	}
 
 	ctx = context.WithValue(ctx, WS_KEY, ws)
@@ -177,8 +177,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				case *nostr.AuthEnvelope:
 					if rl.ServiceURL != "" {
 						if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, rl.ServiceURL); ok {
-							ws.Authed = pubkey
-							close(ws.WaitingForAuth)
+							ws.AuthedPublicKey = pubkey
+							close(ws.Authed)
 							ctx = context.WithValue(ctx, AUTH_CONTEXT_KEY, pubkey)
 							ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
 						} else {
