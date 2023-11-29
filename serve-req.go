@@ -2,12 +2,13 @@ package khatru
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/nbd-wtf/go-nostr"
 )
 
-func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGroup, ws *WebSocket, filter nostr.Filter) {
+func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGroup, ws *WebSocket, filter nostr.Filter) error {
 	defer eose.Done()
 
 	// overwrite the filter (for example, to eliminate some kinds or
@@ -17,7 +18,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	}
 
 	if filter.Limit < 0 {
-		return
+		return fmt.Errorf("filter invalidated")
 	}
 
 	// then check if we'll reject this filter (we apply this after overwriting
@@ -27,7 +28,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	for _, reject := range rl.RejectFilter {
 		if reject, msg := reject(ctx, filter); reject {
 			ws.WriteJSON(nostr.NoticeEnvelope(msg))
-			return
+			return fmt.Errorf(msg)
 		}
 	}
 
@@ -52,6 +53,8 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 			eose.Done()
 		}(ch)
 	}
+
+	return nil
 }
 
 func (rl *Relay) handleCountRequest(ctx context.Context, ws *WebSocket, filter nostr.Filter) int64 {
