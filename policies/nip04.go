@@ -20,13 +20,13 @@ func RejectKind04Snoopers(ctx context.Context, filter nostr.Filter) (bool, strin
 	senders := filter.Authors
 	receivers, _ := filter.Tags["p"]
 	switch {
-	case ws.Authed == "":
+	case ws.AuthedPublicKey == "":
 		// not authenticated
 		return true, "restricted: this relay does not serve kind-4 to unauthenticated users, does your client implement NIP-42?"
-	case len(senders) == 1 && len(receivers) < 2 && (senders[0] == ws.Authed):
+	case len(senders) == 1 && len(receivers) < 2 && (senders[0] == ws.AuthedPublicKey):
 		// allowed filter: ws.authed is sole sender (filter specifies one or all receivers)
 		return false, ""
-	case len(receivers) == 1 && len(senders) < 2 && (receivers[0] == ws.Authed):
+	case len(receivers) == 1 && len(senders) < 2 && (receivers[0] == ws.AuthedPublicKey):
 		// allowed filter: ws.authed is sole receiver (filter specifies one or all senders)
 		return false, ""
 	default:
