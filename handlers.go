@@ -45,6 +45,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	ws := &WebSocket{
 		conn:      conn,
+		Request:   r,
 		Challenge: hex.EncodeToString(challenge),
 		Authed:    make(chan struct{}),
 	}

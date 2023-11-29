@@ -1,6 +1,7 @@
 package khatru
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/fasthttp/websocket"
@@ -9,6 +10,9 @@ import (
 type WebSocket struct {
 	conn  *websocket.Conn
 	mutex sync.Mutex
+
+	// original request
+	Request *http.Request
 
 	// nip42
 	Challenge       string
