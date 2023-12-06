@@ -82,8 +82,3 @@ type Relay struct {
 	PingPeriod     time.Duration // Send pings to peer with this period. Must be less than pongWait.
 	MaxMessageSize int64         // Maximum message size allowed from peer.
 }
-
-func (rl *Relay) RequestAuth(ctx context.Context) {
-	ws := GetConnection(ctx)
-	ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
-}

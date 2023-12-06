@@ -134,6 +134,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						ok = true
 					} else {
 						reason = nostr.NormalizeOKMessage(err.Error(), "blocked")
+						if isAuthRequired(reason) {
+							ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+						}
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: ok, Reason: reason})
 				case *nostr.CountEnvelope:
@@ -154,6 +157,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						err := rl.handleRequest(ctx, env.SubscriptionID, &eose, ws, filter)
 						if err == nil {
 							reason := nostr.NormalizeOKMessage(err.Error(), "blocked")
+							if isAuthRequired(reason) {
+								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+							}
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
 							return
 						}
