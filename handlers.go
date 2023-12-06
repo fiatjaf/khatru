@@ -95,7 +95,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 			go func(message []byte) {
-				ctx = context.Background()
+				ctx := context.WithValue(context.Background(), WS_KEY, ws)
 
 				envelope := nostr.ParseMessage(message)
 				if envelope == nil {
@@ -150,21 +150,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					eose := sync.WaitGroup{}
 					eose.Add(len(env.Filters))
 
-					isFullyRejected := true
-					var reason string
 					for _, filter := range env.Filters {
 						err := rl.handleRequest(ctx, env.SubscriptionID, &eose, ws, filter)
 						if err == nil {
-							isFullyRejected = false
-						} else {
-							reason = err.Error()
+							reason := nostr.NormalizeOKMessage(err.Error(), "blocked")
+							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
+							return
 						}
-					}
-					if isFullyRejected {
-						// this will be called only if all the filters were invalidated
-						reason = nostr.NormalizeOKMessage(reason, "blocked")
-						ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
-						return
 					}
 
 					go func() {
