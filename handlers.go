@@ -19,6 +19,10 @@ import (
 
 // ServeHTTP implements http.Handler interface.
 func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if rl.ServiceURL == "" {
+		rl.ServiceURL = getServiceBaseURL(r)
+	}
+
 	if r.Header.Get("Upgrade") == "websocket" {
 		rl.HandleWebsocket(w, r)
 	} else if r.Header.Get("Accept") == "application/nostr+json" {
@@ -29,7 +33,7 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	connectionContext := r.Context()
 
 	conn, err := rl.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -50,7 +54,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		Authed:    make(chan struct{}),
 	}
 
-	ctx = context.WithValue(ctx, WS_KEY, ws)
+	connectionContext = context.WithValue(connectionContext, WS_KEY, ws)
 
 	// reader
 	go func() {
@@ -71,7 +75,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		})
 
 		for _, onconnect := range rl.OnConnect {
-			onconnect(ctx)
+			onconnect(connectionContext)
 		}
 
 		for {
@@ -95,7 +99,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 			go func(message []byte) {
-				ctx := context.WithValue(context.Background(), WS_KEY, ws)
+				ctx := context.WithValue(
+					context.WithValue(
+						context.Background(),
+						AUTH_CONTEXT_KEY, connectionContext.Value(AUTH_CONTEXT_KEY),
+					),
+					WS_KEY, ws,
+				)
 
 				envelope := nostr.ParseMessage(message)
 				if envelope == nil {
@@ -174,15 +184,14 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				case *nostr.CloseEnvelope:
 					removeListenerId(ws, string(*env))
 				case *nostr.AuthEnvelope:
-					if rl.ServiceURL != "" {
-						if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, rl.ServiceURL); ok {
-							ws.AuthedPublicKey = pubkey
-							close(ws.Authed)
-							ctx = context.WithValue(ctx, AUTH_CONTEXT_KEY, pubkey)
-							ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
-						} else {
-							ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "error: failed to authenticate"})
-						}
+					wsBaseUrl := strings.Replace(rl.ServiceURL, "http", "ws", 1)
+					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
+						ws.AuthedPublicKey = pubkey
+						close(ws.Authed)
+						connectionContext = context.WithValue(ctx, AUTH_CONTEXT_KEY, pubkey)
+						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
+					} else {
+						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "error: failed to authenticate"})
 					}
 				}
 			}(message)
