@@ -165,7 +165,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					for _, filter := range env.Filters {
 						err := rl.handleRequest(ctx, env.SubscriptionID, &eose, ws, filter)
-						if err == nil {
+						if err != nil {
 							reason := nostr.NormalizeOKMessage(err.Error(), "blocked")
 							if isAuthRequired(reason) {
 								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
