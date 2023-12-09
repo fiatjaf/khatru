@@ -53,23 +53,25 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		Authed:    make(chan struct{}),
 	}
 
-	// reader
+	ctx, cancel := context.WithCancel(
+		context.WithValue(
+			context.Background(),
+			WS_KEY, ws,
+		),
+	)
+
+	kill := func() {
+		ticker.Stop()
+		cancel()
+		if _, ok := rl.clients.Load(conn); ok {
+			conn.Close()
+			rl.clients.Delete(conn)
+			removeListener(ws)
+		}
+	}
+
 	go func() {
-		ctx, cancel := context.WithCancel(
-			context.WithValue(
-				context.Background(),
-				WS_KEY, ws,
-			),
-		)
-		defer func() {
-			ticker.Stop()
-			cancel()
-			if _, ok := rl.clients.Load(conn); ok {
-				conn.Close()
-				rl.clients.Delete(conn)
-				removeListener(ws)
-			}
-		}()
+		defer kill()
 
 		conn.SetReadLimit(rl.MaxMessageSize)
 		conn.SetReadDeadline(time.Now().Add(rl.PongWait))
@@ -203,15 +205,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// writer
 	go func() {
-		defer func() {
-			ticker.Stop()
-			conn.Close()
-		}()
+		defer kill()
 
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-ticker.C:
 				err := ws.WriteMessage(websocket.PingMessage, nil)
 				if err != nil {
