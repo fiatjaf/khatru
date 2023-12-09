@@ -5,9 +5,10 @@ go 1.21.0
 require (
 	github.com/fasthttp/websocket v1.5.3
 	github.com/fiatjaf/eventstore v0.1.0
-	github.com/nbd-wtf/go-nostr v0.26.0
+	github.com/nbd-wtf/go-nostr v0.27.0
 	github.com/puzpuzpuz/xsync/v2 v2.5.1
 	github.com/rs/cors v1.7.0
+	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 )
 
@@ -44,7 +45,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
-	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

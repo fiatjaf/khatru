@@ -145,9 +145,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					if err == nil {
 						ok = true
 					} else {
-						reason = nostr.NormalizeOKMessage(err.Error(), "blocked")
-						if isAuthRequired(reason) {
+						if strings.HasPrefix(reason, "auth-required:") {
 							ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+						} else {
+							reason = nostr.NormalizeOKMessage(err.Error(), "blocked")
 						}
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: ok, Reason: reason})
@@ -173,9 +174,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						err := rl.handleRequest(reqCtx, env.SubscriptionID, &eose, ws, filter)
 						if err != nil {
 							// fail everything if any filter is rejected
-							reason := nostr.NormalizeOKMessage(err.Error(), "blocked")
-							if isAuthRequired(reason) {
+							reason := err.Error()
+							if strings.HasPrefix(reason, "auth-required:") {
 								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+							} else {
+								reason = nostr.NormalizeOKMessage(reason, "blocked")
 							}
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
 							cancelReqCtx(fmt.Errorf("filter rejected"))

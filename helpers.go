@@ -27,11 +27,6 @@ func isOlder(previous, next *nostr.Event) bool {
 		(previous.CreatedAt == next.CreatedAt && previous.ID > next.ID)
 }
 
-func isAuthRequired(msg string) bool {
-	idx := strings.IndexByte(msg, ':')
-	return msg[0:idx] == "auth-required"
-}
-
 func getServiceBaseURL(r *http.Request) string {
 	host := r.Header.Get("X-Forwarded-Host")
 	if host == "" {

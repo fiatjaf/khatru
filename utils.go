@@ -20,10 +20,10 @@ func GetIP(ctx context.Context) string {
 }
 
 func GetOpenSubscriptions(ctx context.Context) []nostr.Filter {
-	if listeners, ok := listeners.Load(GetConnection(ctx)); ok {
+	if subs, ok := listeners.Load(GetConnection(ctx)); ok {
 		res := make([]nostr.Filter, 0, listeners.Size()*2)
-		listeners.Range(func(_ string, listener *Listener) bool {
-			res = append(res, listener.filters...)
+		subs.Range(func(_ string, sub *Listener) bool {
+			res = append(res, sub.filters...)
 			return true
 		})
 		return res
