@@ -1,12 +1,16 @@
 package khatru
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/puzpuzpuz/xsync/v2"
 )
 
 type Listener struct {
 	filters nostr.Filters
+	cancel  context.CancelCauseFunc
 }
 
 var listeners = xsync.NewTypedMapOf[*WebSocket, *xsync.MapOf[string, *Listener]](pointerHasher[WebSocket])
@@ -43,24 +47,28 @@ func GetListeningFilters() nostr.Filters {
 	return respfilters
 }
 
-func setListener(id string, ws *WebSocket, filters nostr.Filters) {
+func setListener(id string, ws *WebSocket, filters nostr.Filters, cancel context.CancelCauseFunc) {
 	subs, _ := listeners.LoadOrCompute(ws, func() *xsync.MapOf[string, *Listener] {
 		return xsync.NewMapOf[*Listener]()
 	})
-	subs.Store(id, &Listener{filters: filters})
+	subs.Store(id, &Listener{filters: filters, cancel: cancel})
 }
 
-// Remove a specific subscription id from listeners for a given ws client
+// remove a specific subscription id from listeners for a given ws client
+// and cancel its specific context
 func removeListenerId(ws *WebSocket, id string) {
 	if subs, ok := listeners.Load(ws); ok {
-		subs.Delete(id)
+		if listener, ok := subs.LoadAndDelete(id); ok {
+			listener.cancel(fmt.Errorf("subscription closed by client"))
+		}
 		if subs.Size() == 0 {
 			listeners.Delete(ws)
 		}
 	}
 }
 
-// Remove WebSocket conn from listeners
+// remove WebSocket conn from listeners
+// (no need to cancel contexts as they are all inherited from the main connection context)
 func removeListener(ws *WebSocket) {
 	listeners.Delete(ws)
 }
