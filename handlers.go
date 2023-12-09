@@ -96,7 +96,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				) {
 					rl.Log.Printf("unexpected close error from %s: %v\n", r.Header.Get("X-Forwarded-For"), err)
 				}
-				break
+				return
 			}
 
 			if typ == websocket.PingMessage {
