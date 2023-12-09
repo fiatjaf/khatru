@@ -61,6 +61,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	)
 
 	kill := func() {
+		for _, ondisconnect := range rl.OnDisconnect {
+			ondisconnect(ctx)
+		}
+
 		ticker.Stop()
 		cancel()
 		if _, ok := rl.clients.Load(conn); ok {

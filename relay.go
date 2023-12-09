@@ -56,6 +56,7 @@ type Relay struct {
 	CountEvents               []func(ctx context.Context, filter nostr.Filter) (int64, error)
 	OnAuth                    []func(ctx context.Context, pubkey string)
 	OnConnect                 []func(ctx context.Context)
+	OnDisconnect              []func(ctx context.Context)
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
 
 	// editing info will affect
