@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -158,26 +159,33 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					eose := sync.WaitGroup{}
 					eose.Add(len(env.Filters))
 
-					reqCtx, cancel := context.WithCancelCause(ctx)
+					// a context just for the "stored events" request handler
+					reqCtx, cancelReqCtx := context.WithCancelCause(ctx)
 
+					// handle each filter separately -- dispatching events as they're loaded from databases
 					for _, filter := range env.Filters {
 						err := rl.handleRequest(reqCtx, env.SubscriptionID, &eose, ws, filter)
 						if err != nil {
+							// fail everything if any filter is rejected
 							reason := nostr.NormalizeOKMessage(err.Error(), "blocked")
 							if isAuthRequired(reason) {
 								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
 							}
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
+							cancelReqCtx(fmt.Errorf("filter rejected"))
 							return
 						}
 					}
 
 					go func() {
+						// when all events have been loaded from databases and dispatched
+						// we can cancel the context and fire the EOSE message
 						eose.Wait()
+						cancelReqCtx(nil)
 						ws.WriteJSON(nostr.EOSEEnvelope(env.SubscriptionID))
 					}()
 
-					setListener(env.SubscriptionID, ws, env.Filters, cancel)
+					setListener(env.SubscriptionID, ws, env.Filters, cancelReqCtx)
 				case *nostr.CloseEnvelope:
 					removeListenerId(ws, string(*env))
 				case *nostr.AuthEnvelope:
