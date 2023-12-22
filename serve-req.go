@@ -2,7 +2,7 @@ package khatru
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"sync"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -18,7 +18,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	}
 
 	if filter.Limit < 0 {
-		return fmt.Errorf("filter invalidated")
+		return errors.New("blocked: filter invalidated")
 	}
 
 	// then check if we'll reject this filter (we apply this after overwriting
@@ -28,7 +28,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	for _, reject := range rl.RejectFilter {
 		if reject, msg := reject(ctx, filter); reject {
 			ws.WriteJSON(nostr.NoticeEnvelope(msg))
-			return fmt.Errorf(msg)
+			return errors.New(nostr.NormalizeOKMessage(msg, "blocked"))
 		}
 	}
 

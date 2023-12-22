@@ -2,6 +2,7 @@ package khatru
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/fiatjaf/eventstore"
@@ -10,15 +11,16 @@ import (
 
 func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 	if evt == nil {
-		return fmt.Errorf("event is nil")
+		return errors.New("error: event is nil")
 	}
 
 	for _, reject := range rl.RejectEvent {
 		if reject, msg := reject(ctx, evt); reject {
 			if msg == "" {
-				msg = "no reason"
+				return errors.New("blocked: no reason")
+			} else {
+				return errors.New(nostr.NormalizeOKMessage(msg, "blocked"))
 			}
-			return fmt.Errorf(msg)
 		}
 	}
 
@@ -63,12 +65,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 				case eventstore.ErrDupEvent:
 					return nil
 				default:
-					errmsg := saveErr.Error()
-					if nip20prefixmatcher.MatchString(errmsg) {
-						return saveErr
-					} else {
-						return fmt.Errorf("error: failed to save (%s)", errmsg)
-					}
+					return fmt.Errorf(nostr.NormalizeOKMessage(saveErr.Error(), "error"))
 				}
 			}
 		}

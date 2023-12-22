@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 	"sync"
@@ -135,20 +135,21 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					}
 
 					var ok bool
+					var writeErr error
 					if env.Event.Kind == 5 {
-						err = rl.handleDeleteRequest(ctx, &env.Event)
+						// this always returns "blocked: " whenever it returns an error
+						writeErr = rl.handleDeleteRequest(ctx, &env.Event)
 					} else {
-						err = rl.AddEvent(ctx, &env.Event)
+						// this will also always return a prefixed reason
+						writeErr = rl.AddEvent(ctx, &env.Event)
 					}
 
-					var reason string
-					if err == nil {
+					reason := writeErr.Error()
+					if writeErr == nil {
 						ok = true
 					} else {
 						if strings.HasPrefix(reason, "auth-required:") {
 							ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
-						} else {
-							reason = nostr.NormalizeOKMessage(err.Error(), "blocked")
 						}
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: ok, Reason: reason})
@@ -177,11 +178,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							reason := err.Error()
 							if strings.HasPrefix(reason, "auth-required:") {
 								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
-							} else {
-								reason = nostr.NormalizeOKMessage(reason, "blocked")
 							}
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
-							cancelReqCtx(fmt.Errorf("filter rejected"))
+							cancelReqCtx(errors.New("filter rejected"))
 							return
 						}
 					}
