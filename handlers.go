@@ -144,10 +144,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						writeErr = rl.AddEvent(ctx, &env.Event)
 					}
 
-					reason := writeErr.Error()
+					var reason string
 					if writeErr == nil {
 						ok = true
 					} else {
+						reason = writeErr.Error()
 						if strings.HasPrefix(reason, "auth-required:") {
 							ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
 						}
