@@ -79,7 +79,7 @@ func main() {
 	relay.OnConnect = append(relay.OnConnect,
 		func(ctx context.Context) {
 			// request NIP-42 AUTH from everybody
-			relay.RequestAuth(ctx)
+			khatru.RequestAuth(ctx)
 		},
 	)
 	relay.OnAuth = append(relay.OnAuth,

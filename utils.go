@@ -12,6 +12,11 @@ const (
 	subscriptionIdKey
 )
 
+func RequestAuth(ctx context.Context) {
+	ws := GetConnection(ctx)
+	ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+}
+
 func GetConnection(ctx context.Context) *WebSocket {
 	return ctx.Value(wsKey).(*WebSocket)
 }

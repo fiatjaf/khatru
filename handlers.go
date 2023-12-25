@@ -150,7 +150,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					} else {
 						reason = writeErr.Error()
 						if strings.HasPrefix(reason, "auth-required:") {
-							ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+							RequestAuth(ctx)
 						}
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: ok, Reason: reason})
@@ -181,7 +181,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							// fail everything if any filter is rejected
 							reason := err.Error()
 							if strings.HasPrefix(reason, "auth-required:") {
-								ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
+								RequestAuth(ctx)
 							}
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
 							cancelReqCtx(errors.New("filter rejected"))
