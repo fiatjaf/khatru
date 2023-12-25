@@ -10,11 +10,6 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-const (
-	AUTH_CONTEXT_KEY = iota
-	WS_KEY
-)
-
 func pointerHasher[V any](_ maphash.Seed, k *V) uint64 {
 	return uint64(uintptr(unsafe.Pointer(k)))
 }

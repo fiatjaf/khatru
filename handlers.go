@@ -56,7 +56,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(
 		context.WithValue(
 			context.Background(),
-			WS_KEY, ws,
+			wsKey, ws,
 		),
 	)
 
@@ -170,6 +170,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					// a context just for the "stored events" request handler
 					reqCtx, cancelReqCtx := context.WithCancelCause(ctx)
+
+					// expose subscription id in the context
+					reqCtx = context.WithValue(reqCtx, subscriptionIdKey, env.SubscriptionID)
 
 					// handle each filter separately -- dispatching events as they're loaded from databases
 					for _, filter := range env.Filters {

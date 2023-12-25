@@ -7,8 +7,13 @@ import (
 	"github.com/sebest/xff"
 )
 
+const (
+	wsKey = iota
+	subscriptionIdKey
+)
+
 func GetConnection(ctx context.Context) *WebSocket {
-	return ctx.Value(WS_KEY).(*WebSocket)
+	return ctx.Value(wsKey).(*WebSocket)
 }
 
 func GetAuthed(ctx context.Context) string {
@@ -17,6 +22,10 @@ func GetAuthed(ctx context.Context) string {
 
 func GetIP(ctx context.Context) string {
 	return xff.GetRemoteAddr(GetConnection(ctx).Request)
+}
+
+func GetSubscriptionID(ctx context.Context) string {
+	return ctx.Value(subscriptionIdKey).(string)
 }
 
 func GetOpenSubscriptions(ctx context.Context) []nostr.Filter {
