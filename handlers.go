@@ -50,7 +50,6 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		conn:      conn,
 		Request:   r,
 		Challenge: hex.EncodeToString(challenge),
-		Authed:    make(chan struct{}),
 	}
 
 	ctx, cancel := context.WithCancel(
@@ -204,7 +203,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					wsBaseUrl := strings.Replace(rl.ServiceURL, "http", "ws", 1)
 					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
 						ws.AuthedPublicKey = pubkey
-						close(ws.Authed)
+						ws.authLock.Lock()
+						if ws.Authed != nil {
+							close(ws.Authed)
+						}
+						ws.authLock.Unlock()
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
 					} else {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "error: failed to authenticate"})

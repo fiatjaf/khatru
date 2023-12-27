@@ -18,6 +18,8 @@ type WebSocket struct {
 	Challenge       string
 	AuthedPublicKey string
 	Authed          chan struct{}
+
+	authLock sync.Mutex
 }
 
 func (ws *WebSocket) WriteJSON(any any) error {
