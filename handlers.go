@@ -206,6 +206,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						ws.authLock.Lock()
 						if ws.Authed != nil {
 							close(ws.Authed)
+							ws.Authed = nil
 						}
 						ws.authLock.Unlock()
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
