@@ -15,7 +15,9 @@ const (
 func RequestAuth(ctx context.Context) {
 	ws := GetConnection(ctx)
 	ws.authLock.Lock()
-	ws.Authed = make(chan struct{})
+	if ws.Authed == nil {
+		ws.Authed = make(chan struct{})
+	}
 	ws.authLock.Unlock()
 	ws.WriteJSON(nostr.AuthEnvelope{Challenge: &ws.Challenge})
 }
