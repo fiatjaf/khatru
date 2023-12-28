@@ -69,12 +69,8 @@ func main() {
 				return false, ""
 			}
 			return true, "auth-required: only authenticated users can read from this relay"
-		},
-	)
-	relay.OnAuth = append(relay.OnAuth,
-		func(ctx context.Context, pubkey string) {
-			// and when they auth we can just log that for nothing
-			log.Println(pubkey + " is authed!")
+			// (this will cause an AUTH message to be sent and then a CLOSED message such that clients can
+			//  authenticate and then request again)
 		},
 	)
 	// check the docs for more goodies!

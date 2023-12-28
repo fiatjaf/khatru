@@ -54,7 +54,6 @@ type Relay struct {
 	DeleteEvent               []func(ctx context.Context, event *nostr.Event) error
 	QueryEvents               []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
 	CountEvents               []func(ctx context.Context, filter nostr.Filter) (int64, error)
-	OnAuth                    []func(ctx context.Context, pubkey string)
 	OnConnect                 []func(ctx context.Context)
 	OnDisconnect              []func(ctx context.Context)
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)

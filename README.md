@@ -76,16 +76,17 @@ func main() {
 			return false, "" // anyone else can
 		},
 	)
-	relay.OnConnect = append(relay.OnConnect,
-		func(ctx context.Context) {
-			// request NIP-42 AUTH from everybody
-			khatru.RequestAuth(ctx)
-		},
-	)
-	relay.OnAuth = append(relay.OnAuth,
-		func(ctx context.Context, pubkey string) {
-			// and when they auth we just log that for nothing
-			log.Println(pubkey + " is authed!")
+
+	// you can request auth by rejecting an event or a request with the prefix "auth-required: "
+	relay.RejectFilter = append(relay.RejectFilter,
+		func(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
+			if pubkey := khatru.GetAuthed(ctx); pubkey != "" {
+				log.Printf("request from %s\n", pubkey)
+				return false, ""
+			}
+			return true, "auth-required: only authenticated users can read from this relay"
+			// (this will cause an AUTH message to be sent and then a CLOSED message such that clients can
+			//  authenticate and then request again)
 		},
 	)
 	// check the docs for more goodies!
