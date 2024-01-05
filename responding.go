@@ -18,7 +18,9 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	}
 
 	if filter.Limit < 0 {
-		return errors.New("blocked: filter invalidated")
+		// this is a special situation through which the implementor signals to us that it doesn't want
+		// to event perform any queries whatsoever
+		return nil
 	}
 
 	// then check if we'll reject this filter (we apply this after overwriting
