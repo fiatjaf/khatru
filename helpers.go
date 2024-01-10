@@ -1,18 +1,12 @@
 package khatru
 
 import (
-	"hash/maphash"
 	"net/http"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"github.com/nbd-wtf/go-nostr"
 )
-
-func pointerHasher[V any](_ maphash.Seed, k *V) uint64 {
-	return uint64(uintptr(unsafe.Pointer(k)))
-}
 
 func isOlder(previous, next *nostr.Event) bool {
 	return previous.CreatedAt < next.CreatedAt ||

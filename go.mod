@@ -1,12 +1,12 @@
 module github.com/fiatjaf/khatru
 
-go 1.21.0
+go 1.21.4
 
 require (
 	github.com/fasthttp/websocket v1.5.3
 	github.com/fiatjaf/eventstore v0.3.1
-	github.com/nbd-wtf/go-nostr v0.27.1
-	github.com/puzpuzpuz/xsync/v2 v2.5.1
+	github.com/nbd-wtf/go-nostr v0.28.0
+	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d

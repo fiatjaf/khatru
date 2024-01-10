@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/puzpuzpuz/xsync/v2"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type Listener struct {
@@ -13,7 +13,7 @@ type Listener struct {
 	cancel  context.CancelCauseFunc
 }
 
-var listeners = xsync.NewTypedMapOf[*WebSocket, *xsync.MapOf[string, *Listener]](pointerHasher[WebSocket])
+var listeners = xsync.NewMapOf[*WebSocket, *xsync.MapOf[string, *Listener]]()
 
 func GetListeningFilters() nostr.Filters {
 	respfilters := make(nostr.Filters, 0, listeners.Size()*2)
@@ -49,7 +49,7 @@ func GetListeningFilters() nostr.Filters {
 
 func setListener(id string, ws *WebSocket, filters nostr.Filters, cancel context.CancelCauseFunc) {
 	subs, _ := listeners.LoadOrCompute(ws, func() *xsync.MapOf[string, *Listener] {
-		return xsync.NewMapOf[*Listener]()
+		return xsync.NewMapOf[string, *Listener]()
 	})
 	subs.Store(id, &Listener{filters: filters, cancel: cancel})
 }

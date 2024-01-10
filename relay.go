@@ -10,7 +10,7 @@ import (
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip11"
-	"github.com/puzpuzpuz/xsync/v2"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 func NewRelay() *Relay {
@@ -29,7 +29,7 @@ func NewRelay() *Relay {
 			CheckOrigin:     func(r *http.Request) bool { return true },
 		},
 
-		clients:  xsync.NewTypedMapOf[*websocket.Conn, struct{}](pointerHasher[websocket.Conn]),
+		clients:  xsync.NewMapOf[*websocket.Conn, struct{}](),
 		serveMux: &http.ServeMux{},
 
 		WriteWait:      10 * time.Second,
