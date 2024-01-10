@@ -57,6 +57,7 @@ type Relay struct {
 	OnConnect                 []func(ctx context.Context)
 	OnDisconnect              []func(ctx context.Context)
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
+	OnEphemeralEvent          []func(ctx context.Context, event *nostr.Event)
 
 	// editing info will affect
 	Info *nip11.RelayInformationDocument

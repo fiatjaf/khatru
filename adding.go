@@ -27,6 +27,9 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 
 	if 20000 <= evt.Kind && evt.Kind < 30000 {
 		// do not store ephemeral events
+		for _, oee := range rl.OnEphemeralEvent {
+			oee(ctx, evt)
+		}
 	} else {
 		if evt.Kind == 0 || evt.Kind == 3 || (10000 <= evt.Kind && evt.Kind < 20000) {
 			// replaceable event, delete before storing
