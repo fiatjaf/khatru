@@ -147,6 +147,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					var reason string
 					if writeErr == nil {
 						ok = true
+						for _, ovw := range rl.OverwriteResponseEvent {
+							ovw(ctx, &env.Event)
+						}
+						notifyListeners(&env.Event)
 					} else {
 						reason = writeErr.Error()
 						if strings.HasPrefix(reason, "auth-required:") {
