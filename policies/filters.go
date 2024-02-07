@@ -45,7 +45,10 @@ func NoSearchQueries(ctx context.Context, filter nostr.Filter) (reject bool, msg
 }
 
 func RemoveSearchQueries(ctx context.Context, filter *nostr.Filter) {
-	filter.Search = ""
+	if filter.Search != "" {
+		filter.Search = ""
+		filter.Limit = -1 // signals that this query should be just skipped
+	}
 }
 
 func RemoveAllButKinds(kinds ...uint16) func(context.Context, *nostr.Filter) {
@@ -58,15 +61,23 @@ func RemoveAllButKinds(kinds ...uint16) func(context.Context, *nostr.Filter) {
 				}
 			}
 			filter.Kinds = newKinds
+			if len(filter.Kinds) == 0 {
+				filter.Limit = -1 // signals that this query should be just skipped
+			}
 		}
 	}
 }
 
 func RemoveAllButTags(tagNames ...string) func(context.Context, *nostr.Filter) {
 	return func(ctx context.Context, filter *nostr.Filter) {
-		for tagName := range filter.Tags {
-			if !slices.Contains(tagNames, tagName) {
-				delete(filter.Tags, tagName)
+		if n := len(filter.Tags); n > 0 {
+			for tagName := range filter.Tags {
+				if !slices.Contains(tagNames, tagName) {
+					delete(filter.Tags, tagName)
+				}
+			}
+			if len(filter.Tags) == 0 {
+				filter.Limit = -1 // signals that this query should be just skipped
 			}
 		}
 	}
