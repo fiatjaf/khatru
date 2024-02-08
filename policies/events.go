@@ -3,8 +3,9 @@ package policies
 import (
 	"context"
 
+	"slices"
+
 	"github.com/nbd-wtf/go-nostr"
-	"golang.org/x/exp/slices"
 )
 
 // PreventTooManyIndexableTags returns a function that can be used as a RejectFilter that will reject

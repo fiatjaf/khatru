@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fiatjaf/khatru"
 	"github.com/fiatjaf/eventstore/sqlite3"
+	"github.com/fiatjaf/khatru"
 )
 
 func main() {

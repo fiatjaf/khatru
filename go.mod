@@ -9,7 +9,6 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
 
 require (
@@ -51,6 +50,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.18.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

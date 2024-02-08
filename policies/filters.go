@@ -3,8 +3,9 @@ package policies
 import (
 	"context"
 
+	"slices"
+
 	"github.com/nbd-wtf/go-nostr"
-	"golang.org/x/exp/slices"
 )
 
 // NoComplexFilters disallows filters with more than 2 tags.
