@@ -240,7 +240,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if typ == websocket.PingMessage {
-				ws.WriteMessage(websocket.PongMessage, nil)
+				ws.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(rl.WriteWait))
 				continue
 			}
 
@@ -256,7 +256,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				err := ws.WriteMessage(websocket.PingMessage, nil)
+				err := ws.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(rl.WriteWait))
 				if err != nil {
 					if !strings.HasSuffix(err.Error(), "use of closed network connection") {
 						rl.Log.Printf("error writing ping: %v; closing websocket\n", err)
