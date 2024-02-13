@@ -20,7 +20,7 @@ func NewRelay() *Relay {
 		Info: &nip11.RelayInformationDocument{
 			Software:      "https://github.com/fiatjaf/khatru",
 			Version:       "n/a",
-			SupportedNIPs: make([]int, 0),
+			SupportedNIPs: []int{1, 11, 70},
 		},
 
 		upgrader: websocket.Upgrader{
