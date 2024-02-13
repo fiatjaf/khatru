@@ -134,6 +134,31 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 
+					// check NIP-70 protected
+					for _, v := range env.Event.Tags {
+						if len(v) == 1 && v[0] == "-" {
+							msg := "must be published by event author"
+							authed := GetAuthed(ctx)
+							if authed == "" {
+								RequestAuth(ctx)
+								ws.WriteJSON(nostr.OKEnvelope{
+									EventID: env.Event.ID,
+									OK:      false,
+									Reason:  "auth-required: " + msg,
+								})
+								return
+							}
+							if authed != env.Event.PubKey {
+								ws.WriteJSON(nostr.OKEnvelope{
+									EventID: env.Event.ID,
+									OK:      false,
+									Reason:  "blocked: " + msg,
+								})
+								return
+							}
+						}
+					}
+
 					var ok bool
 					var writeErr error
 					if env.Event.Kind == 5 {
