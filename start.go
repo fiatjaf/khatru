@@ -2,6 +2,7 @@ package khatru
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -48,6 +49,8 @@ func (rl *Relay) Start(host string, port int, started ...chan bool) error {
 
 // Shutdown sends a websocket close control message to all connected clients.
 func (rl *Relay) Shutdown(ctx context.Context) {
+	rl.cancel(fmt.Errorf("Shutdown called"))
+
 	rl.httpServer.Shutdown(ctx)
 
 	rl.clients.Range(func(conn *websocket.Conn, _ struct{}) bool {

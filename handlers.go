@@ -272,6 +272,7 @@ func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/nostr+json")
 
 	info := *rl.Info
+
 	for _, ovw := range rl.OverwriteRelayInformation {
 		info = ovw(r.Context(), r, info)
 	}

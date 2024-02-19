@@ -2,6 +2,7 @@ package khatru
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,32 +13,6 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip11"
 	"github.com/puzpuzpuz/xsync/v3"
 )
-
-func NewRelay() *Relay {
-	return &Relay{
-		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
-
-		Info: &nip11.RelayInformationDocument{
-			Software:      "https://github.com/fiatjaf/khatru",
-			Version:       "n/a",
-			SupportedNIPs: []int{1, 11, 70},
-		},
-
-		upgrader: websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
-			CheckOrigin:     func(r *http.Request) bool { return true },
-		},
-
-		clients:  xsync.NewMapOf[*websocket.Conn, struct{}](),
-		serveMux: &http.ServeMux{},
-
-		WriteWait:      10 * time.Second,
-		PongWait:       60 * time.Second,
-		PingPeriod:     30 * time.Second,
-		MaxMessageSize: 512000,
-	}
-}
 
 type Relay struct {
 	ServiceURL string
@@ -59,7 +34,7 @@ type Relay struct {
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
 	OnEphemeralEvent          []func(ctx context.Context, event *nostr.Event)
 
-	// editing info will affect
+	// editing info will affect the responses to the NIP-11 endpoint
 	Info *nip11.RelayInformationDocument
 
 	// Default logger, as set by NewServer, is a stdlib logger prefixed with "[khatru-relay] ",
@@ -82,4 +57,49 @@ type Relay struct {
 	PongWait       time.Duration // Time allowed to read the next pong message from the peer.
 	PingPeriod     time.Duration // Send pings to peer with this period. Must be less than pongWait.
 	MaxMessageSize int64         // Maximum message size allowed from peer.
+
+	// this context is used for all things inside the relay
+	Context context.Context
+	cancel  context.CancelCauseFunc
+}
+
+func NewRelay() *Relay {
+	return NewRelayWithContext(context.Background())
+}
+
+func NewRelayWithContext(ctx context.Context) *Relay {
+	ctx, cancel := context.WithCancelCause(ctx)
+
+	rl := &Relay{
+		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
+
+		Info: &nip11.RelayInformationDocument{
+			Software:      "https://github.com/fiatjaf/khatru",
+			Version:       "n/a",
+			SupportedNIPs: []int{1, 11, 70},
+		},
+
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin:     func(r *http.Request) bool { return true },
+		},
+
+		clients:  xsync.NewMapOf[*websocket.Conn, struct{}](),
+		serveMux: &http.ServeMux{},
+
+		WriteWait:      10 * time.Second,
+		PongWait:       60 * time.Second,
+		PingPeriod:     30 * time.Second,
+		MaxMessageSize: 512000,
+
+		Context: ctx,
+		cancel:  cancel,
+	}
+
+	return rl
+}
+
+func (rl *Relay) Close() {
+	rl.cancel(fmt.Errorf("Close called"))
 }
