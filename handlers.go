@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/nbd-wtf/go-nostr/nip42"
 	"github.com/rs/cors"
 )
 
@@ -230,18 +230,35 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				case *nostr.CloseEnvelope:
 					removeListenerId(ws, string(*env))
 				case *nostr.AuthEnvelope:
-					wsBaseUrl := strings.Replace(rl.ServiceURL, "http", "ws", 1)
-					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
-						ws.AuthedPublicKey = pubkey
+					ok := ValidateAuthEvent(&env.Event, strings.Replace(rl.ServiceURL, "http", "ws", 1))
+
+					message := "error: failed to authenticate"
+					for _, reject := range rl.RejectAuth {
+						if !ok {
+							break
+						}
+
+						if bad, msg := reject(ctx, &env.Event, ws.Challenge); bad {
+							ok = false
+
+							if msg != "" {
+								message = msg
+							}
+						}
+					}
+
+					if ok {
+						ws.AuthedPublicKey = env.Event.PubKey
 						ws.authLock.Lock()
 						if ws.Authed != nil {
 							close(ws.Authed)
 							ws.Authed = nil
 						}
 						ws.authLock.Unlock()
+
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: true})
 					} else {
-						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "error: failed to authenticate"})
+						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: message})
 					}
 				}
 			}(message)
@@ -277,4 +294,50 @@ func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(info)
+}
+
+// helper function for ValidateAuthEvent.
+func parseURL(input string) (*url.URL, error) {
+	return url.Parse(
+		strings.ToLower(
+			strings.TrimSuffix(input, "/"),
+		),
+	)
+}
+
+// ValidateAuthEvent checks whether event is a valid NIP-42 event for given relayURL.
+// The result of the validation is encoded in the ok bool. It does NOT check the challenge.
+func ValidateAuthEvent(event *nostr.Event, relayURL string) bool {
+	if event.Kind != nostr.KindClientAuthentication {
+		return false
+	}
+
+	expected, err := parseURL(relayURL)
+	if err != nil {
+		return false
+	}
+
+	found, err := parseURL(event.Tags.GetFirst([]string{"relay", ""}).Value())
+	if err != nil {
+		return false
+	}
+
+	if expected.Scheme != found.Scheme ||
+		expected.Host != found.Host ||
+		expected.Path != found.Path {
+		return false
+	}
+
+	now := time.Now()
+	if event.CreatedAt.Time().After(now.Add(10*time.Minute)) || event.CreatedAt.Time().Before(now.Add(-10*time.Minute)) {
+		return false
+	}
+
+	// save for last, as it is most expensive operation
+	// no need to check returned error, since ok == true implies err == nil.
+	if ok, _ := event.CheckSignature(); !ok {
+		return false
+	}
+
+	return true
 }

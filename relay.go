@@ -43,6 +43,7 @@ type Relay struct {
 	ServiceURL string
 
 	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
+	RejectAuth                []func(ctx context.Context, event *nostr.Event, challenge string) (reject bool, msg string)
 	RejectFilter              []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	RejectCountFilter         []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
