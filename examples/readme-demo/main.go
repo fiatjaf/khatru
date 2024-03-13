@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/fiatjaf/khatru"
+	"github.com/fiatjaf/khatru/policies"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -53,6 +54,11 @@ func main() {
 
 	// there are many other configurable things you can set
 	relay.RejectEvent = append(relay.RejectEvent,
+		// built-in policies
+		policies.ValidateKind,
+
+		// define your own policies
+		policies.PreventLargeTags(80),
 		func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
 			if event.PubKey == "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52" {
 				return true, "we don't allow this person to write here"
@@ -63,6 +69,10 @@ func main() {
 
 	// you can request auth by rejecting an event or a request with the prefix "auth-required: "
 	relay.RejectFilter = append(relay.RejectFilter,
+		// built-in policies
+		policies.NoComplexFilters,
+
+		// define your own policies
 		func(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
 			if pubkey := khatru.GetAuthed(ctx); pubkey != "" {
 				log.Printf("request from %s\n", pubkey)
