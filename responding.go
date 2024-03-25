@@ -29,7 +29,6 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 	// filter we can just reject it)
 	for _, reject := range rl.RejectFilter {
 		if reject, msg := reject(ctx, filter); reject {
-			ws.WriteJSON(nostr.NoticeEnvelope(msg))
 			return errors.New(nostr.NormalizeOKMessage(msg, "blocked"))
 		}
 	}
