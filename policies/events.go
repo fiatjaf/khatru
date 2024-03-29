@@ -78,7 +78,7 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		// these are cheap and very questionable optimizations, but they exist for a reason:
 		// we would have to ensure that the kind number is within the bounds of a uint16 anyway
 		if event.Kind > max {
-			return true, fmt.Sprintf("event kind not allowed (it should be lower than %)", max)
+			return true, fmt.Sprintf("event kind not allowed (it should be lower than %d)", max)
 		}
 		if event.Kind < min {
 			return true, fmt.Sprintf("event kind not allowed (it should be higher than %d)", min)
@@ -92,8 +92,7 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 			return false, ""
 		}
 
-		allowedKindsStringFormatted := fmt.Sprintf("%d\n", kinds)
-		return true, fmt.Sprintf("Received event kind %d not allowed, only allowed are: %s", event.Kind, allowedKindsStringFormatted)
+		return true, fmt.Sprintf("received event kind %d not allowed", event.Kind)
 	}
 }
 
