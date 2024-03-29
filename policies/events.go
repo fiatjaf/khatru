@@ -1,8 +1,8 @@
 package policies
 
 import (
+    "fmt"
 	"context"
-
 	"slices"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -78,17 +78,22 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		// these are cheap and very questionable optimizations, but they exist for a reason:
 		// we would have to ensure that the kind number is within the bounds of a uint16 anyway
 		if event.Kind > max {
-			return true, "event kind not allowed"
+			return true, fmt.Sprintf("event kind not allowed (it should be lower than %)", max)
 		}
 		if event.Kind < min {
-			return true, "event kind not allowed"
+			return true, fmt.Sprintf("event kind not allowed (it should be higher than %d)", min)
 		}
+
+        // Sort the kinds in increasing order
+        slices.Sort(kinds)
 
 		// hopefully this map of uint16s is very fast
 		if _, allowed := slices.BinarySearch(kinds, uint16(event.Kind)); allowed {
 			return false, ""
 		}
-		return true, "event kind not allowed"
+
+        allowedKindsStringFormatted := fmt.Sprintf("%d\n", kinds)
+		return true, fmt.Sprintf("Received event kind %d not allowed, only allowed are: %s", event.Kind, allowedKindsStringFormatted)
 	}
 }
 
