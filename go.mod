@@ -5,7 +5,7 @@ go 1.21.4
 require (
 	github.com/fasthttp/websocket v1.5.7
 	github.com/fiatjaf/eventstore v0.3.8
-	github.com/nbd-wtf/go-nostr v0.28.1
+	github.com/nbd-wtf/go-nostr v0.30.0
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a

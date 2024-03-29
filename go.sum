@@ -115,6 +115,8 @@ github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/nbd-wtf/go-nostr v0.28.1 h1:XQi/lBsigBXHRm7IDBJE7SR9citCh9srgf8sA5iVW3A=
 github.com/nbd-wtf/go-nostr v0.28.1/go.mod h1:OQ8sNLFJnsj17BdqZiLSmjJBIFTfDqckEYC3utS4qoY=
+github.com/nbd-wtf/go-nostr v0.30.0 h1:rN085pe4IxmSBVht8LChZbWLggonjA8hPIk8l4/+Hjk=
+github.com/nbd-wtf/go-nostr v0.30.0/go.mod h1:tiKJY6fWYSujbTQb201Y+IQ3l4szqYVt+fsTnsm7FCk=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

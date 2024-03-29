@@ -17,9 +17,8 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 		ovw(ctx, &filter)
 	}
 
-	if filter.Limit < 0 {
-		// this is a special situation through which the implementor signals to us that it doesn't want
-		// to event perform any queries whatsoever
+	if filter.LimitZero {
+		// don't do any queries, just subscribe to future events
 		return nil
 	}
 
