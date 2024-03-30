@@ -14,6 +14,9 @@ import (
 // If ignoreKinds is given this restriction will not apply to these kinds (useful for allowing a bigger).
 // If onlyKinds is given then all other kinds will be ignored.
 func PreventTooManyIndexableTags(max int, ignoreKinds []int, onlyKinds []int) func(context.Context, *nostr.Event) (bool, string) {
+	slices.Sort(ignoreKinds)
+	slices.Sort(onlyKinds)
+
 	ignore := func(kind int) bool { return false }
 	if len(ignoreKinds) > 0 {
 		ignore = func(kind int) bool {
@@ -74,6 +77,9 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		}
 	}
 
+	// sort the kinds in increasing order
+	slices.Sort(kinds)
+
 	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
 		// these are cheap and very questionable optimizations, but they exist for a reason:
 		// we would have to ensure that the kind number is within the bounds of a uint16 anyway
@@ -83,9 +89,6 @@ func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Even
 		if event.Kind < min {
 			return true, fmt.Sprintf("event kind not allowed (it should be higher than %d)", min)
 		}
-
-		// Sort the kinds in increasing order
-		slices.Sort(kinds)
 
 		// hopefully this map of uint16s is very fast
 		if _, allowed := slices.BinarySearch(kinds, uint16(event.Kind)); allowed {
