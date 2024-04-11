@@ -38,9 +38,11 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 				if err != nil {
 					continue
 				}
-				if previous := <-ch; previous != nil && isOlder(previous, evt) {
-					for _, del := range rl.DeleteEvent {
-						del(ctx, previous)
+				for previous := range ch {
+					if isOlder(previous, evt) {
+						for _, del := range rl.DeleteEvent {
+							del(ctx, previous)
+						}
 					}
 				}
 			}
@@ -53,9 +55,11 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) error {
 					if err != nil {
 						continue
 					}
-					if previous := <-ch; previous != nil && isOlder(previous, evt) {
-						for _, del := range rl.DeleteEvent {
-							del(ctx, previous)
+					for previous := range ch {
+						if isOlder(previous, evt) {
+							for _, del := range rl.DeleteEvent {
+								del(ctx, previous)
+							}
 						}
 					}
 				}
