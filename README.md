@@ -128,3 +128,13 @@ Fear no more. Using the https://github.com/fiatjaf/eventstore module you get a b
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
 ```
+
+### But I don't want to write a bunch of custom policies!
+
+Fear no more. We have a bunch of common policies written in the `github.com/fiatjaf/khatru/policies` package and also a handpicked selection of base sane defaults, which you can apply with:
+
+```go
+	policies.ApplySaneDefaults(relay)
+```
+
+Contributions to this are very much welcomed.
