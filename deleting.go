@@ -34,7 +34,9 @@ func (rl *Relay) handleDeleteRequest(ctx context.Context, evt *nostr.Event) erro
 				if acceptDeletion {
 					// delete it
 					for _, del := range rl.DeleteEvent {
-						del(ctx, target)
+						if err := del(ctx, target); err != nil {
+							return err
+						}
 					}
 				} else {
 					// fail and stop here
