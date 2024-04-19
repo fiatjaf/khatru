@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -115,4 +116,8 @@ func PreventTimestampsInTheFuture(thresholdSeconds nostr.Timestamp) func(context
 		}
 		return false, ""
 	}
+}
+
+func RejectEventsWithBase64Media(ctx context.Context, evt *nostr.Event) (bool, string) {
+	return strings.Contains(evt.Content, "data:image/") || strings.Contains(evt.Content, "data:video/"), "event with base64 media"
 }
