@@ -161,12 +161,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					var ok bool
 					var writeErr error
+					var skipBroadcast bool
 					if env.Event.Kind == 5 {
 						// this always returns "blocked: " whenever it returns an error
 						writeErr = rl.handleDeleteRequest(ctx, &env.Event)
 					} else {
 						// this will also always return a prefixed reason
-						writeErr = rl.AddEvent(ctx, &env.Event)
+						skipBroadcast, writeErr = rl.AddEvent(ctx, &env.Event)
 					}
 
 					var reason string
@@ -175,7 +176,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						for _, ovw := range rl.OverwriteResponseEvent {
 							ovw(ctx, &env.Event)
 						}
-						notifyListeners(&env.Event)
+						if !skipBroadcast {
+							notifyListeners(&env.Event)
+						}
 					} else {
 						reason = writeErr.Error()
 						if strings.HasPrefix(reason, "auth-required:") {
