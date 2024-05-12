@@ -8,7 +8,6 @@ require (
 	github.com/nbd-wtf/go-nostr v0.30.0
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
-	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a
 )
 
 require (

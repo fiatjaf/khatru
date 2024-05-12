@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/sebest/xff"
 )
 
 const (
@@ -31,7 +30,7 @@ func GetAuthed(ctx context.Context) string {
 }
 
 func GetIP(ctx context.Context) string {
-	return xff.GetRemoteAddr(GetConnection(ctx).Request)
+	return GetIPFromRequest(GetConnection(ctx).Request)
 }
 
 func GetSubscriptionID(ctx context.Context) string {

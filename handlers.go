@@ -34,6 +34,13 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
+	for _, reject := range rl.RejectConnection {
+		if reject(r) {
+			w.WriteHeader(418) // I'm a teapot
+			return
+		}
+	}
+
 	conn, err := rl.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		rl.Log.Printf("failed to upgrade websocket: %v\n", err)
