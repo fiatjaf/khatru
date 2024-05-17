@@ -36,7 +36,7 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	for _, reject := range rl.RejectConnection {
 		if reject(r) {
-			w.WriteHeader(418) // I'm a teapot
+			w.WriteHeader(429) // Too many requests
 			return
 		}
 	}
