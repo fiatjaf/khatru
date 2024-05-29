@@ -41,6 +41,9 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 			ws.WriteJSON(nostr.NoticeEnvelope(err.Error()))
 			eose.Done()
 			continue
+		} else if ch == nil {
+			eose.Done()
+			continue
 		}
 
 		go func(ch chan *nostr.Event) {
