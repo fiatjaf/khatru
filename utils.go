@@ -22,11 +22,19 @@ func RequestAuth(ctx context.Context) {
 }
 
 func GetConnection(ctx context.Context) *WebSocket {
-	return ctx.Value(wsKey).(*WebSocket)
+	wsi := ctx.Value(wsKey)
+	if wsi != nil {
+		return wsi.(*WebSocket)
+	}
+	return nil
 }
 
 func GetAuthed(ctx context.Context) string {
-	return GetConnection(ctx).AuthedPublicKey
+	conn := GetConnection(ctx)
+	if conn != nil {
+		return conn.AuthedPublicKey
+	}
+	return ""
 }
 
 func GetIP(ctx context.Context) string {
