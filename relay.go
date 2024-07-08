@@ -20,7 +20,7 @@ func NewRelay() *Relay {
 		Info: &nip11.RelayInformationDocument{
 			Software:      "https://github.com/fiatjaf/khatru",
 			Version:       "n/a",
-			SupportedNIPs: []int{1, 11, 42, 70},
+			SupportedNIPs: []int{1, 11, 42, 70, 86},
 		},
 
 		upgrader: websocket.Upgrader{
@@ -60,7 +60,10 @@ type Relay struct {
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
 	OnEphemeralEvent          []func(ctx context.Context, event *nostr.Event)
 
-	// editing info will affect
+	// setting up handlers here will enable these methods
+	ManagementAPI RelayManagementAPI
+
+	// editing info will affect the NIP-11 responses
 	Info *nip11.RelayInformationDocument
 
 	// Default logger, as set by NewServer, is a stdlib logger prefixed with "[khatru-relay] ",

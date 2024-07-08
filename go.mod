@@ -4,8 +4,8 @@ go 1.21.4
 
 require (
 	github.com/fasthttp/websocket v1.5.7
-	github.com/fiatjaf/eventstore v0.3.8
-	github.com/nbd-wtf/go-nostr v0.30.0
+	github.com/fiatjaf/eventstore v0.5.0
+	github.com/nbd-wtf/go-nostr v0.34.2
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
 )
@@ -37,7 +37,7 @@ require (
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.3 // indirect
+	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-sqlite3 v1.14.18 // indirect
@@ -51,6 +51,6 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
