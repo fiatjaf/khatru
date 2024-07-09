@@ -9,6 +9,7 @@ import (
 const (
 	wsKey = iota
 	subscriptionIdKey
+	nip86HeaderAuthKey
 )
 
 func RequestAuth(ctx context.Context) {
@@ -30,9 +31,11 @@ func GetConnection(ctx context.Context) *WebSocket {
 }
 
 func GetAuthed(ctx context.Context) string {
-	conn := GetConnection(ctx)
-	if conn != nil {
+	if conn := GetConnection(ctx); conn != nil {
 		return conn.AuthedPublicKey
+	}
+	if nip86Auth := ctx.Value(nip86HeaderAuthKey); nip86Auth != nil {
+		return nip86Auth.(string)
 	}
 	return ""
 }
