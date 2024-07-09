@@ -52,22 +52,25 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 	auth := r.Header.Get("Authorization")
 	spl := strings.Split(auth, "Nostr ")
 	if len(spl) != 2 {
-		http.Error(w, "missing auth", 403)
+		http.Error(w, "missing auth", 401)
 		return
 	}
 
 	var evt nostr.Event
 	if evtj, err := base64.StdEncoding.DecodeString(spl[1]); err != nil {
-		http.Error(w, "invalid base64 auth", 403)
+		http.Error(w, "invalid base64 auth", 401)
 		return
 	} else if err := json.Unmarshal(evtj, &evt); err != nil {
-		http.Error(w, "invalid auth event json", 403)
+		http.Error(w, "invalid auth event json", 401)
 		return
 	} else if ok, _ := evt.CheckSignature(); !ok {
-		http.Error(w, "invalid auth event", 403)
+		http.Error(w, "invalid auth event", 401)
 		return
 	} else if pht := evt.Tags.GetFirst([]string{"payload", hex.EncodeToString(payloadHash[:])}); pht == nil {
-		http.Error(w, "invalid auth event payload hash", 403)
+		http.Error(w, "invalid auth event payload hash", 401)
+		return
+	} else if evt.CreatedAt < nostr.Now()-30 {
+		http.Error(w, "auth event is too old", 401)
 		return
 	}
 
