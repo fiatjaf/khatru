@@ -42,53 +42,59 @@ type RelayManagementAPI struct {
 func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/nostr+json+rpc")
 
+	var (
+		resp        nip86.Response
+		ctx         = r.Context()
+		req         nip86.Request
+		mp          nip86.MethodParams
+		evt         nostr.Event
+		payloadHash [32]byte
+	)
+
 	payload, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "empty request", 400)
-		return
+		resp.Error = "empty request"
+		goto respond
 	}
-	payloadHash := sha256.Sum256(nil)
+	payloadHash = sha256.Sum256(payload)
 
-	auth := r.Header.Get("Authorization")
-	spl := strings.Split(auth, "Nostr ")
-	if len(spl) != 2 {
-		http.Error(w, "missing auth", 401)
-		return
+	{
+		auth := r.Header.Get("Authorization")
+		spl := strings.Split(auth, "Nostr ")
+		if len(spl) != 2 {
+			resp.Error = "missing auth"
+			goto respond
+		}
+		if evtj, err := base64.StdEncoding.DecodeString(spl[1]); err != nil {
+			resp.Error = "invalid base64 auth"
+			goto respond
+		} else if err := json.Unmarshal(evtj, &evt); err != nil {
+			resp.Error = "invalid auth event json"
+			goto respond
+		} else if ok, _ := evt.CheckSignature(); !ok {
+			resp.Error = "invalid auth event"
+			goto respond
+		} else if pht := evt.Tags.GetFirst([]string{"payload", hex.EncodeToString(payloadHash[:])}); pht == nil {
+			resp.Error = "invalid auth event payload hash"
+			goto respond
+		} else if evt.CreatedAt < nostr.Now()-30 {
+			resp.Error = "auth event is too old"
+			goto respond
+		}
 	}
 
-	var evt nostr.Event
-	if evtj, err := base64.StdEncoding.DecodeString(spl[1]); err != nil {
-		http.Error(w, "invalid base64 auth", 401)
-		return
-	} else if err := json.Unmarshal(evtj, &evt); err != nil {
-		http.Error(w, "invalid auth event json", 401)
-		return
-	} else if ok, _ := evt.CheckSignature(); !ok {
-		http.Error(w, "invalid auth event", 401)
-		return
-	} else if pht := evt.Tags.GetFirst([]string{"payload", hex.EncodeToString(payloadHash[:])}); pht == nil {
-		http.Error(w, "invalid auth event payload hash", 401)
-		return
-	} else if evt.CreatedAt < nostr.Now()-30 {
-		http.Error(w, "auth event is too old", 401)
-		return
-	}
-
-	var req nip86.Request
 	if err := json.Unmarshal(payload, &req); err != nil {
-		http.Error(w, "invalid json body", 400)
-		return
+		resp.Error = "invalid json body"
+		goto respond
 	}
 
-	mp, err := nip86.DecodeRequest(req)
+	mp, err = nip86.DecodeRequest(req)
 	if err != nil {
-		http.Error(w, "invalid params: "+err.Error(), 400)
-		return
+		resp.Error = fmt.Sprintf("invalid params: %s", err)
+		goto respond
 	}
 
-	var resp nip86.Response
-
-	ctx := context.WithValue(r.Context(), nip86HeaderAuthKey, evt.PubKey)
+	ctx = context.WithValue(ctx, nip86HeaderAuthKey, evt.PubKey)
 	for _, rac := range rl.ManagementAPI.RejectAPICall {
 		if reject, msg := rac(ctx, mp); reject {
 			resp.Error = msg
