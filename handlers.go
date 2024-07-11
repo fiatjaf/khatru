@@ -27,7 +27,7 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rl.HandleWebsocket(w, r)
 	} else if r.Header.Get("Accept") == "application/nostr+json" {
 		cors.AllowAll().Handler(http.HandlerFunc(rl.HandleNIP11)).ServeHTTP(w, r)
-	} else if r.Header.Get("Accept") == "application/nostr+json+rpc" {
+	} else if r.Header.Get("Content-Type") == "application/nostr+json+rpc" {
 		cors.AllowAll().Handler(http.HandlerFunc(rl.HandleNIP86)).ServeHTTP(w, r)
 	} else {
 		rl.serveMux.ServeHTTP(w, r)
