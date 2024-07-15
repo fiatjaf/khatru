@@ -9,7 +9,8 @@ export default {
       {text: 'Why', link: '/why'},
       {text: 'Use Cases', link: '/use-cases'},
       {text: 'Get Started', link: '/getting-started'},
-      {text: 'Cookbook', link: '/cookbook'}
+      {text: 'Cookbook', link: '/cookbook'},
+      {text: 'Source', link: 'https://github.com/fiatjaf/khatru'}
     ],
     editLink: {
       pattern: 'https://github.com/fiatjaf/khatru/edit/master/docs/:path'
