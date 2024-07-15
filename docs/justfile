@@ -1,0 +1,7 @@
+export PATH := "./node_modules/.bin:" + env_var('PATH')
+
+dev:
+  vitepress dev
+
+build:
+  vitepress build

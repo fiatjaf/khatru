@@ -1,0 +1,24 @@
+:root {
+  --vp-c-brand-1: #2eafab;
+  --vp-c-brand-2: #30373b;
+  --vp-c-brand-3: #3b6a3e;
+  --vp-button-brand-bg: #2eafab;
+  --vp-button-brand-hover-bg: #3b6a3e;
+  --vp-button-brand-active-bg: #30373b;
+
+  --vp-c-bg: #f2e6e2;
+  --vp-c-bg-soft: #f3f2f0;
+}
+
+.dark {
+  --vp-c-bg: #0a0a08;
+  --vp-c-bg-soft: #161a0e;
+}
+
+.khatru-layout-bottom {
+  margin: 2rem auto;
+  width: 200px;
+  text-align: center;
+  font-family: monospace;
+  font-size: 2rem;
+}
