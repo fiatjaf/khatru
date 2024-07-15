@@ -11,7 +11,7 @@ hero:
       link: /getting-started
     - theme: alt
       text: Cookbook
-      link: /cookbook
+      link: /cookbook/
 
 features:
   - title: It's a library
