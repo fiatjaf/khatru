@@ -74,6 +74,9 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 		} else if ok, _ := evt.CheckSignature(); !ok {
 			resp.Error = "invalid auth event"
 			goto respond
+		} else if uTag := evt.Tags.GetFirst([]string{"u", ""}); uTag == nil || getServiceBaseURL(r) != (*uTag)[1] {
+			resp.Error = "invalid 'u' tag"
+			goto respond
 		} else if pht := evt.Tags.GetFirst([]string{"payload", hex.EncodeToString(payloadHash[:])}); pht == nil {
 			resp.Error = "invalid auth event payload hash"
 			goto respond
