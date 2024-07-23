@@ -22,7 +22,7 @@ features:
     icon: 🎶
     link: /cookbook/embed
     details: Run arbitrary functions to reject events, reject filters, overwrite results of queries, perform actual queries, mix the relay stuff with other HTTP handlers or even run it inside an existing website.
-  - title: It's plugs into event stores easily
+  - title: It plugs into event stores easily
     icon: 📦
     link: /cookbook/eventstore
     details: khatru's companion, the `eventstore` library, provides all methods for storing and querying events efficiently from SQLite, LMDB, Postgres, Badger and others.
