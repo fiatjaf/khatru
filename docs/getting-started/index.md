@@ -4,6 +4,12 @@ outline: deep
 
 # Getting Started
 
+Download the library:
+
+```bash
+go get github.com/fiatjaf/khatru
+```
+
 Include the library:
 
 ```go
