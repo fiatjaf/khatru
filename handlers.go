@@ -47,7 +47,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		rl.Log.Printf("failed to upgrade websocket: %v\n", err)
 		return
 	}
-	rl.clients.Store(conn, struct{}{})
+
 	ticker := time.NewTicker(rl.PingPeriod)
 
 	// NIP-42 challenge
@@ -59,6 +59,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		Request:   r,
 		Challenge: hex.EncodeToString(challenge),
 	}
+
+	rl.clientsMutex.Lock()
+	rl.clients[ws] = make([]listenerSpec, 0, 2)
+	rl.clientsMutex.Unlock()
 
 	ctx, cancel := context.WithCancel(
 		context.WithValue(
@@ -74,11 +78,22 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 		ticker.Stop()
 		cancel()
-		if _, ok := rl.clients.Load(conn); ok {
-			conn.Close()
-			rl.clients.Delete(conn)
-			removeListener(ws)
+		conn.Close()
+
+		rl.clientsMutex.Lock()
+		defer rl.clientsMutex.Unlock()
+		if specs, ok := rl.clients[ws]; ok {
+			// swap delete listeners and delete client
+			for s, spec := range specs {
+				// no need to cancel contexts since they inherit from the main connection context
+				// just delete the listeners
+				srl := spec.subrelay
+				srl.listeners[spec.index] = srl.listeners[len(srl.listeners)-1]
+				specs[s] = specs[len(specs)-1]
+				srl.listeners = srl.listeners[0:len(srl.listeners)]
+			}
 		}
+		delete(rl.clients, ws)
 	}
 
 	go func() {
@@ -167,25 +182,30 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						}
 					}
 
+					srl := rl
+					if rl.getSubRelayFromEvent != nil {
+						srl = rl.getSubRelayFromEvent(&env.Event)
+					}
+
 					var ok bool
 					var writeErr error
 					var skipBroadcast bool
 					if env.Event.Kind == 5 {
 						// this always returns "blocked: " whenever it returns an error
-						writeErr = rl.handleDeleteRequest(ctx, &env.Event)
+						writeErr = srl.handleDeleteRequest(ctx, &env.Event)
 					} else {
 						// this will also always return a prefixed reason
-						skipBroadcast, writeErr = rl.AddEvent(ctx, &env.Event)
+						skipBroadcast, writeErr = srl.AddEvent(ctx, &env.Event)
 					}
 
 					var reason string
 					if writeErr == nil {
 						ok = true
-						for _, ovw := range rl.OverwriteResponseEvent {
+						for _, ovw := range srl.OverwriteResponseEvent {
 							ovw(ctx, &env.Event)
 						}
 						if !skipBroadcast {
-							notifyListeners(&env.Event)
+							srl.notifyListeners(&env.Event)
 						}
 					} else {
 						reason = writeErr.Error()
@@ -199,9 +219,14 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: "unsupported: this relay does not support NIP-45"})
 						return
 					}
+
 					var total int64
 					for _, filter := range env.Filters {
-						total += rl.handleCountRequest(ctx, ws, filter)
+						srl := rl
+						if rl.getSubRelayFromFilter != nil {
+							srl = rl.getSubRelayFromFilter(filter)
+						}
+						total += srl.handleCountRequest(ctx, ws, filter)
 					}
 					ws.WriteJSON(nostr.CountEnvelope{SubscriptionID: env.SubscriptionID, Count: &total})
 				case *nostr.ReqEnvelope:
@@ -216,7 +241,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					// handle each filter separately -- dispatching events as they're loaded from databases
 					for _, filter := range env.Filters {
-						err := rl.handleRequest(reqCtx, env.SubscriptionID, &eose, ws, filter)
+						srl := rl
+						if rl.getSubRelayFromFilter != nil {
+							srl = rl.getSubRelayFromFilter(filter)
+						}
+						err := srl.handleRequest(reqCtx, env.SubscriptionID, &eose, ws, filter)
 						if err != nil {
 							// fail everything if any filter is rejected
 							reason := err.Error()
@@ -226,6 +255,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
 							cancelReqCtx(errors.New("filter rejected"))
 							return
+						} else {
+							rl.addListener(ws, env.SubscriptionID, srl, filter, cancelReqCtx)
 						}
 					}
 
@@ -236,10 +267,9 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 						cancelReqCtx(nil)
 						ws.WriteJSON(nostr.EOSEEnvelope(env.SubscriptionID))
 					}()
-
-					setListener(env.SubscriptionID, ws, env.Filters, cancelReqCtx)
 				case *nostr.CloseEnvelope:
-					removeListenerId(ws, string(*env))
+					id := string(*env)
+					rl.removeListenerId(ws, id)
 				case *nostr.AuthEnvelope:
 					wsBaseUrl := strings.Replace(rl.ServiceURL, "http", "ws", 1)
 					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {

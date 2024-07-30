@@ -2,86 +2,91 @@ package khatru
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/puzpuzpuz/xsync/v3"
 )
 
-type Listener struct {
-	filters nostr.Filters
-	cancel  context.CancelCauseFunc
+var ErrSubscriptionClosedByClient = errors.New("subscription closed by client")
+
+type listenerSpec struct {
+	subscriptionId string // kept here so we can easily match against it removeListenerId
+	cancel         context.CancelCauseFunc
+	index          int
+	subrelay       *Relay // this is important when we're dealing with routing, otherwise it will be always the same
 }
 
-var listeners = xsync.NewMapOf[*WebSocket, *xsync.MapOf[string, *Listener]]()
+type listener struct {
+	subscriptionId string // duplicated here so we can easily send it on notifyListeners
+	filter         nostr.Filter
+	ws             *WebSocket
+}
 
-func GetListeningFilters() nostr.Filters {
-	respfilters := make(nostr.Filters, 0, listeners.Size()*2)
-
-	// here we go through all the existing listeners
-	listeners.Range(func(_ *WebSocket, subs *xsync.MapOf[string, *Listener]) bool {
-		subs.Range(func(_ string, listener *Listener) bool {
-			for _, listenerfilter := range listener.filters {
-				for _, respfilter := range respfilters {
-					// check if this filter specifically is already added to respfilters
-					if nostr.FilterEqual(listenerfilter, respfilter) {
-						goto nextconn
-					}
-				}
-
-				// field not yet present on respfilters, add it
-				respfilters = append(respfilters, listenerfilter)
-
-				// continue to the next filter
-			nextconn:
-				continue
-			}
-
-			return true
-		})
-
-		return true
-	})
-
-	// respfilters will be a slice with all the distinct filter we currently have active
+func (rl *Relay) GetListeningFilters() []nostr.Filter {
+	respfilters := make([]nostr.Filter, len(rl.listeners))
+	for i, l := range rl.listeners {
+		respfilters[i] = l.filter
+	}
 	return respfilters
 }
 
-func setListener(id string, ws *WebSocket, filters nostr.Filters, cancel context.CancelCauseFunc) {
-	subs, _ := listeners.LoadOrCompute(ws, func() *xsync.MapOf[string, *Listener] {
-		return xsync.NewMapOf[string, *Listener]()
-	})
-	subs.Store(id, &Listener{filters: filters, cancel: cancel})
+// addListener may be called multiple times for each id and ws -- in which case each filter will
+// be added as an independent listener
+func (rl *Relay) addListener(
+	ws *WebSocket,
+	id string,
+	subrelay *Relay,
+	filter nostr.Filter,
+	cancel context.CancelCauseFunc,
+) {
+	rl.clientsMutex.Lock()
+	defer rl.clientsMutex.Unlock()
+
+	if specs, ok := rl.clients[ws]; ok /* this will always be true unless client has disconnected very rapidly */ {
+		idx := len(subrelay.listeners)
+		rl.clients[ws] = append(specs, listenerSpec{
+			subscriptionId: id,
+			cancel:         cancel,
+			subrelay:       subrelay,
+			index:          idx,
+		})
+		subrelay.listeners = append(subrelay.listeners, listener{
+			ws:             ws,
+			subscriptionId: id,
+			filter:         filter,
+		})
+	}
 }
 
 // remove a specific subscription id from listeners for a given ws client
 // and cancel its specific context
-func removeListenerId(ws *WebSocket, id string) {
-	if subs, ok := listeners.Load(ws); ok {
-		if listener, ok := subs.LoadAndDelete(id); ok {
-			listener.cancel(fmt.Errorf("subscription closed by client"))
+func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
+	rl.clientsMutex.Lock()
+	defer rl.clientsMutex.Unlock()
+
+	if specs, ok := rl.clients[ws]; ok {
+		// swap delete specs that match this id
+		nswaps := 0
+		for s, spec := range specs {
+			if spec.subscriptionId == id {
+				spec.cancel(ErrSubscriptionClosedByClient)
+				specs[s] = specs[len(specs)-1-nswaps]
+				nswaps++
+
+				// swap delete listeners one at a time, as they may be each in a different subrelay
+				srl := spec.subrelay // == rl in normal cases, but different when this came from a route
+				srl.listeners[spec.index] = srl.listeners[len(srl.listeners)-1]
+				srl.listeners = srl.listeners[0 : len(srl.listeners)-1]
+			}
 		}
-		if subs.Size() == 0 {
-			listeners.Delete(ws)
-		}
+		rl.clients[ws] = specs[0 : len(specs)-nswaps]
 	}
 }
 
-// remove WebSocket conn from listeners
-// (no need to cancel contexts as they are all inherited from the main connection context)
-func removeListener(ws *WebSocket) {
-	listeners.Delete(ws)
-}
-
-func notifyListeners(event *nostr.Event) {
-	listeners.Range(func(ws *WebSocket, subs *xsync.MapOf[string, *Listener]) bool {
-		subs.Range(func(id string, listener *Listener) bool {
-			if !listener.filters.Match(event) {
-				return true
-			}
-			ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &id, Event: *event})
-			return true
-		})
-		return true
-	})
+func (rl *Relay) notifyListeners(event *nostr.Event) {
+	for _, listener := range rl.listeners {
+		if listener.filter.Matches(event) {
+			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.subscriptionId, Event: *event})
+		}
+	}
 }

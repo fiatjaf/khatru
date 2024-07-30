@@ -49,11 +49,12 @@ func (rl *Relay) Start(host string, port int, started ...chan bool) error {
 // Shutdown sends a websocket close control message to all connected clients.
 func (rl *Relay) Shutdown(ctx context.Context) {
 	rl.httpServer.Shutdown(ctx)
-
-	rl.clients.Range(func(conn *websocket.Conn, _ struct{}) bool {
-		conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
-		conn.Close()
-		rl.clients.Delete(conn)
-		return true
-	})
+	rl.clientsMutex.Lock()
+	defer rl.clientsMutex.Unlock()
+	for ws := range rl.clients {
+		ws.conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
+		ws.conn.Close()
+	}
+	clear(rl.clients)
+	rl.listeners = rl.listeners[:0]
 }

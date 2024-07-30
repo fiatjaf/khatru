@@ -54,3 +54,5 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
+
+replace github.com/nbd-wtf/go-nostr => ../go-nostr

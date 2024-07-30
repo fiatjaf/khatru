@@ -8,3 +8,4 @@
 - [Live event generation](custom-live-events)
 - [Embedding `khatru` inside other Go HTTP servers](embed)
 - [Generating relays dynamically and serving them from the same path](dynamic)
+- [Routing between multiple relays](routing)

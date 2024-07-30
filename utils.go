@@ -47,15 +47,3 @@ func GetIP(ctx context.Context) string {
 func GetSubscriptionID(ctx context.Context) string {
 	return ctx.Value(subscriptionIdKey).(string)
 }
-
-func GetOpenSubscriptions(ctx context.Context) []nostr.Filter {
-	if subs, ok := listeners.Load(GetConnection(ctx)); ok {
-		res := make([]nostr.Filter, 0, listeners.Size()*2)
-		subs.Range(func(_ string, sub *Listener) bool {
-			res = append(res, sub.filters...)
-			return true
-		})
-		return res
-	}
-	return nil
-}
