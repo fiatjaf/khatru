@@ -86,6 +86,11 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 func (rl *Relay) notifyListeners(event *nostr.Event) {
 	for _, listener := range rl.listeners {
 		if listener.filter.Matches(event) {
+			for _, pb := range rl.PreventBroadcast {
+				if pb(listener.ws, event) {
+					return
+				}
+			}
 			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.subscriptionId, Event: *event})
 		}
 	}

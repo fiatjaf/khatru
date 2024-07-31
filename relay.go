@@ -64,6 +64,7 @@ type Relay struct {
 	OnDisconnect              []func(ctx context.Context)
 	OverwriteRelayInformation []func(ctx context.Context, r *http.Request, info nip11.RelayInformationDocument) nip11.RelayInformationDocument
 	OverwriteResponseEvent    []func(ctx context.Context, event *nostr.Event)
+	PreventBroadcast          []func(ws *WebSocket, event *nostr.Event) bool
 
 	// these are used when this relays acts as a router
 	routes                []Route
