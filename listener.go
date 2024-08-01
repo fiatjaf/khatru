@@ -3,6 +3,7 @@ package khatru
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -10,16 +11,16 @@ import (
 var ErrSubscriptionClosedByClient = errors.New("subscription closed by client")
 
 type listenerSpec struct {
-	subscriptionId string // kept here so we can easily match against it removeListenerId
-	cancel         context.CancelCauseFunc
-	index          int
-	subrelay       *Relay // this is important when we're dealing with routing, otherwise it will be always the same
+	id       string // kept here so we can easily match against it removeListenerId
+	cancel   context.CancelCauseFunc
+	index    int
+	subrelay *Relay // this is important when we're dealing with routing, otherwise it will be always the same
 }
 
 type listener struct {
-	subscriptionId string // duplicated here so we can easily send it on notifyListeners
-	filter         nostr.Filter
-	ws             *WebSocket
+	id     string // duplicated here so we can easily send it on notifyListeners
+	filter nostr.Filter
+	ws     *WebSocket
 }
 
 func (rl *Relay) GetListeningFilters() []nostr.Filter {
@@ -45,15 +46,15 @@ func (rl *Relay) addListener(
 	if specs, ok := rl.clients[ws]; ok /* this will always be true unless client has disconnected very rapidly */ {
 		idx := len(subrelay.listeners)
 		rl.clients[ws] = append(specs, listenerSpec{
-			subscriptionId: id,
-			cancel:         cancel,
-			subrelay:       subrelay,
-			index:          idx,
+			id:       id,
+			cancel:   cancel,
+			subrelay: subrelay,
+			index:    idx,
 		})
 		subrelay.listeners = append(subrelay.listeners, listener{
-			ws:             ws,
-			subscriptionId: id,
-			filter:         filter,
+			ws:     ws,
+			id:     id,
+			filter: filter,
 		})
 	}
 }
@@ -68,19 +69,61 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 		// swap delete specs that match this id
 		nswaps := 0
 		for s, spec := range specs {
-			if spec.subscriptionId == id {
+			if spec.id == id {
 				spec.cancel(ErrSubscriptionClosedByClient)
 				specs[s] = specs[len(specs)-1-nswaps]
 				nswaps++
 
 				// swap delete listeners one at a time, as they may be each in a different subrelay
 				srl := spec.subrelay // == rl in normal cases, but different when this came from a route
-				srl.listeners[spec.index] = srl.listeners[len(srl.listeners)-1]
-				srl.listeners = srl.listeners[0 : len(srl.listeners)-1]
+
+				if spec.index != len(srl.listeners)-1 {
+					movedFromIndex := len(srl.listeners) - 1
+					moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
+					srl.listeners[spec.index] = moved
+
+					// update the index of the listener we just moved
+					movedSpecs := rl.clients[moved.ws]
+					idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
+						return ls.index == movedFromIndex
+					})
+					movedSpecs[idx].index = spec.index
+					rl.clients[moved.ws] = movedSpecs
+				}
+				srl.listeners = srl.listeners[0 : len(srl.listeners)-1] // finally reduce the slice length
 			}
 		}
 		rl.clients[ws] = specs[0 : len(specs)-nswaps]
 	}
+}
+
+func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
+	rl.clientsMutex.Lock()
+	defer rl.clientsMutex.Unlock()
+	if specs, ok := rl.clients[ws]; ok {
+		// swap delete listeners and delete client (all specs will be deleted)
+		for _, spec := range specs {
+			// no need to cancel contexts since they inherit from the main connection context
+			// just delete the listeners (swap-delete)
+			srl := spec.subrelay
+
+			if spec.index != len(srl.listeners)-1 {
+				movedFromIndex := len(srl.listeners) - 1
+				moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
+				srl.listeners[spec.index] = moved
+
+				// update the index of the listener we just moved
+				movedSpecs := rl.clients[moved.ws]
+				idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
+					return ls.index == movedFromIndex
+				})
+				movedSpecs[idx].index = spec.index
+				rl.clients[moved.ws] = movedSpecs
+			}
+			srl.listeners = srl.listeners[0 : len(srl.listeners)-1] // finally reduce the slice length
+		}
+	}
+	delete(rl.clients, ws)
 }
 
 func (rl *Relay) notifyListeners(event *nostr.Event) {
@@ -91,7 +134,7 @@ func (rl *Relay) notifyListeners(event *nostr.Event) {
 					return
 				}
 			}
-			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.subscriptionId, Event: *event})
+			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.id, Event: *event})
 		}
 	}
 }
