@@ -205,7 +205,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							ovw(ctx, &env.Event)
 						}
 						if !skipBroadcast {
-							srl.notifyListeners(&env.Event, nil)
+							srl.notifyListeners(&env.Event)
 						}
 					} else {
 						reason = writeErr.Error()

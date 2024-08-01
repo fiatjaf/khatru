@@ -5,7 +5,7 @@ go 1.21.4
 require (
 	github.com/fasthttp/websocket v1.5.7
 	github.com/fiatjaf/eventstore v0.5.1
-	github.com/nbd-wtf/go-nostr v0.34.3
+	github.com/nbd-wtf/go-nostr v0.34.5
 	github.com/puzpuzpuz/xsync/v3 v3.0.2
 	github.com/rs/cors v1.7.0
 )
@@ -54,5 +54,3 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
-
-replace github.com/nbd-wtf/go-nostr => ../go-nostr
