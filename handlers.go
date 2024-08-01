@@ -80,20 +80,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		cancel()
 		conn.Close()
 
-		rl.clientsMutex.Lock()
-		defer rl.clientsMutex.Unlock()
-		if specs, ok := rl.clients[ws]; ok {
-			// swap delete listeners and delete client
-			for s, spec := range specs {
-				// no need to cancel contexts since they inherit from the main connection context
-				// just delete the listeners
-				srl := spec.subrelay
-				srl.listeners[spec.index] = srl.listeners[len(srl.listeners)-1]
-				specs[s] = specs[len(specs)-1]
-				srl.listeners = srl.listeners[0:len(srl.listeners)]
-			}
-		}
-		delete(rl.clients, ws)
+		rl.removeClientAndListeners(ws)
 	}
 
 	go func() {
