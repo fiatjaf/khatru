@@ -67,12 +67,13 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 
 	if specs, ok := rl.clients[ws]; ok {
 		// swap delete specs that match this id
-		nswaps := 0
-		for s, spec := range specs {
+		for s := len(specs) - 1; s >= 0; s-- {
+			spec := specs[s]
 			if spec.id == id {
 				spec.cancel(ErrSubscriptionClosedByClient)
-				specs[s] = specs[len(specs)-1-nswaps]
-				nswaps++
+				specs[s] = specs[len(specs)-1]
+				specs = specs[0 : len(specs)-1]
+				rl.clients[ws] = specs
 
 				// swap delete listeners one at a time, as they may be each in a different subrelay
 				srl := spec.subrelay // == rl in normal cases, but different when this came from a route
@@ -82,7 +83,8 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 					moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
 					srl.listeners[spec.index] = moved
 
-					// update the index of the listener we just moved
+					// now we must update the the listener we just moved
+					// so its .index reflects its new position on srl.listeners
 					movedSpecs := rl.clients[moved.ws]
 					idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
 						return ls.index == movedFromIndex
@@ -93,7 +95,6 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 				srl.listeners = srl.listeners[0 : len(srl.listeners)-1] // finally reduce the slice length
 			}
 		}
-		rl.clients[ws] = specs[0 : len(specs)-nswaps]
 	}
 }
 
