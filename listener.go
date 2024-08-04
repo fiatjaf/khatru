@@ -102,7 +102,7 @@ func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
 	defer rl.clientsMutex.Unlock()
 	if specs, ok := rl.clients[ws]; ok {
 		// swap delete listeners and delete client (all specs will be deleted)
-		for _, spec := range specs {
+		for s, spec := range specs {
 			// no need to cancel contexts since they inherit from the main connection context
 			// just delete the listeners (swap-delete)
 			srl := spec.subrelay
@@ -112,7 +112,12 @@ func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
 				moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
 				srl.listeners[spec.index] = moved
 
-				// update the index of the listener we just moved
+				// temporarily update the spec of the listener being removed to have index == -1
+				// (since it was removed) so it doesn't match in the search below
+				rl.clients[ws][s].index = -1
+
+				// now we must update the the listener we just moved
+				// so its .index reflects its new position on srl.listeners
 				movedSpecs := rl.clients[moved.ws]
 				idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
 					return ls.index == movedFromIndex
