@@ -516,3 +516,30 @@ func TestRandomListenerIdRemoving(t *testing.T) {
 		require.Len(t, specs, 0)
 	}
 }
+
+func TestRouterListenersPabloCrash(t *testing.T) {
+	rl := NewRelay()
+
+	rla := NewRelay()
+	rlb := NewRelay()
+
+	ws1 := &WebSocket{}
+	ws2 := &WebSocket{}
+	ws3 := &WebSocket{}
+
+	rl.clients[ws1] = nil
+	rl.clients[ws2] = nil
+	rl.clients[ws3] = nil
+
+	f := nostr.Filter{Kinds: []int{1}}
+	cancel := func(cause error) {}
+
+	rl.addListener(ws1, ":1", rla, f, cancel)
+	rl.addListener(ws2, ":1", rlb, f, cancel)
+	rl.addListener(ws3, "a", rlb, f, cancel)
+	rl.addListener(ws3, "b", rla, f, cancel)
+	rl.addListener(ws3, "c", rlb, f, cancel)
+
+	rl.removeClientAndListeners(ws1)
+	rl.removeClientAndListeners(ws3)
+}
