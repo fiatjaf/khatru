@@ -11,14 +11,14 @@ import (
 var ErrSubscriptionClosedByClient = errors.New("subscription closed by client")
 
 type listenerSpec struct {
-	id       string // kept here so we can easily match against it removeListenerId
+	id       string
 	cancel   context.CancelCauseFunc
 	index    int
-	subrelay *Relay // this is important when we're dealing with routing, otherwise it will be always the same
+	subrelay *Relay
 }
 
 type listener struct {
-	id     string // duplicated here so we can easily send it on notifyListeners
+	id     string
 	filter nostr.Filter
 	ws     *WebSocket
 }
@@ -31,8 +31,6 @@ func (rl *Relay) GetListeningFilters() []nostr.Filter {
 	return respfilters
 }
 
-// addListener may be called multiple times for each id and ws -- in which case each filter will
-// be added as an independent listener
 func (rl *Relay) addListener(
 	ws *WebSocket,
 	id string,
@@ -43,7 +41,7 @@ func (rl *Relay) addListener(
 	rl.clientsMutex.Lock()
 	defer rl.clientsMutex.Unlock()
 
-	if specs, ok := rl.clients[ws]; ok /* this will always be true unless client has disconnected very rapidly */ {
+	if specs, ok := rl.clients[ws]; ok {
 		idx := len(subrelay.listeners)
 		rl.clients[ws] = append(specs, listenerSpec{
 			id:       id,
@@ -66,33 +64,34 @@ func (rl *Relay) removeListenerId(ws *WebSocket, id string) {
 	defer rl.clientsMutex.Unlock()
 
 	if specs, ok := rl.clients[ws]; ok {
-		// swap delete specs that match this id
 		for s := len(specs) - 1; s >= 0; s-- {
 			spec := specs[s]
 			if spec.id == id {
 				spec.cancel(ErrSubscriptionClosedByClient)
-				specs[s] = specs[len(specs)-1]
-				specs = specs[0 : len(specs)-1]
-				rl.clients[ws] = specs
 
 				// swap delete listeners one at a time, as they may be each in a different subrelay
 				srl := spec.subrelay // == rl in normal cases, but different when this came from a route
+				lastIndex := len(srl.listeners) - 1
 
-				if spec.index != len(srl.listeners)-1 {
-					movedFromIndex := len(srl.listeners) - 1
-					moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
-					srl.listeners[spec.index] = moved
+				if spec.index >= 0 && spec.index < len(srl.listeners) {
+					if spec.index != lastIndex {
+						moved := srl.listeners[lastIndex]
+						srl.listeners[spec.index] = moved
 
-					// now we must update the the listener we just moved
-					// so its .index reflects its new position on srl.listeners
-					movedSpecs := rl.clients[moved.ws]
-					idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
-						return ls.index == movedFromIndex
-					})
-					movedSpecs[idx].index = spec.index
-					rl.clients[moved.ws] = movedSpecs
+						movedSpecs := rl.clients[moved.ws]
+						idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
+							return ls.index == lastIndex
+						})
+						if idx != -1 {
+							movedSpecs[idx].index = spec.index
+						}
+					}
+					srl.listeners = srl.listeners[:lastIndex]
 				}
-				srl.listeners = srl.listeners[0 : len(srl.listeners)-1] // finally reduce the slice length
+
+				specs[s] = specs[len(specs)-1]
+				specs = specs[:len(specs)-1]
+				rl.clients[ws] = specs
 			}
 		}
 	}
@@ -103,30 +102,32 @@ func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
 	defer rl.clientsMutex.Unlock()
 	if specs, ok := rl.clients[ws]; ok {
 		// swap delete listeners and delete client (all specs will be deleted)
-		for s, spec := range specs {
+		for s := len(specs) - 1; s >= 0; s-- {
 			// no need to cancel contexts since they inherit from the main connection context
 			// just delete the listeners (swap-delete)
+			spec := specs[s]
 			srl := spec.subrelay
+			lastIndex := len(srl.listeners) - 1
 
-			if spec.index != len(srl.listeners)-1 {
-				movedFromIndex := len(srl.listeners) - 1
-				moved := srl.listeners[movedFromIndex] // this wasn't removed, but will be moved
-				srl.listeners[spec.index] = moved
+			if spec.index >= 0 && spec.index < len(srl.listeners) {
+				if spec.index != lastIndex {
+					moved := srl.listeners[lastIndex] // this wasn't removed, but will be moved
+					srl.listeners[spec.index] = moved
 
-				// temporarily update the spec of the listener being removed to have index == -1
-				// (since it was removed) so it doesn't match in the search below
-				rl.clients[ws][s].index = -1
-
-				// now we must update the the listener we just moved
-				// so its .index reflects its new position on srl.listeners
-				movedSpecs := rl.clients[moved.ws]
-				idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
-					return ls.index == movedFromIndex
-				})
-				movedSpecs[idx].index = spec.index
-				rl.clients[moved.ws] = movedSpecs
+					movedSpecs := rl.clients[moved.ws]
+					idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
+						return ls.index == lastIndex
+					})
+					if idx != -1 {
+						movedSpecs[idx].index = spec.index
+					}
+				}
+				srl.listeners = srl.listeners[:lastIndex]
 			}
-			srl.listeners = srl.listeners[0 : len(srl.listeners)-1] // finally reduce the slice length
+
+			specs[s] = specs[len(specs)-1]
+			specs = specs[:len(specs)-1]
+			rl.clients[ws] = specs
 		}
 	}
 	delete(rl.clients, ws)
