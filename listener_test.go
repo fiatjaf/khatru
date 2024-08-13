@@ -2,11 +2,26 @@ package khatru
 
 import (
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/stretchr/testify/require"
 )
+
+func idFromSeqUpper(seq int) string { return idFromSeq(seq, 65, 90) }
+func idFromSeqLower(seq int) string { return idFromSeq(seq, 97, 122) }
+func idFromSeq(seq int, min, max int) string {
+	maxSeq := max - min + 1
+	nLetters := seq/maxSeq + 1
+	result := strings.Builder{}
+	result.Grow(nLetters)
+	for l := 0; l < nLetters; l++ {
+		letter := rune(seq%maxSeq + min)
+		result.WriteRune(letter)
+	}
+	return result.String()
+}
 
 func TestListenerSetupAndRemoveOnce(t *testing.T) {
 	rl := NewRelay()
@@ -425,11 +440,11 @@ func TestRandomListenerClientRemoving(t *testing.T) {
 	for j := 0; j < 20; j++ {
 		for i := 0; i < 20; i++ {
 			ws := websockets[i]
-			w := string(rune(i + 65))
+			w := idFromSeqUpper(i)
 
 			if rand.Intn(2) < 1 {
 				l++
-				rl.addListener(ws, w+":"+string(rune(j+97)), rl, f, cancel)
+				rl.addListener(ws, w+":"+idFromSeqLower(j), rl, f, cancel)
 			}
 		}
 	}
@@ -470,10 +485,10 @@ func TestRandomListenerIdRemoving(t *testing.T) {
 	for j := 0; j < 20; j++ {
 		for i := 0; i < 20; i++ {
 			ws := websockets[i]
-			w := string(rune(i + 65))
+			w := idFromSeqUpper(i)
 
 			if rand.Intn(2) < 1 {
-				id := w + ":" + string(rune(j+97))
+				id := w + ":" + idFromSeqLower(j)
 				rl.addListener(ws, id, rl, f, cancel)
 				subs = append(subs, wsid{ws, id})
 
