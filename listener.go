@@ -121,7 +121,7 @@ func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
 				// so its .index reflects its new position on srl.listeners
 				movedSpecs := rl.clients[moved.ws]
 				idx := slices.IndexFunc(movedSpecs, func(ls listenerSpec) bool {
-					return ls.index == movedFromIndex
+					return ls.index == movedFromIndex && ls.subrelay == srl
 				})
 				movedSpecs[idx].index = spec.index
 				rl.clients[moved.ws] = movedSpecs
