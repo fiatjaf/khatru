@@ -127,3 +127,62 @@ func FuzzRandomListenerIdRemoving(f *testing.F) {
 		}
 	})
 }
+
+func FuzzRouterListenersPabloCrash(f *testing.F) {
+	f.Add(uint(3), uint(6), uint(2), uint(20))
+	f.Fuzz(func(t *testing.T, totalRelays uint, totalConns uint, subFreq uint, subIterations uint) {
+		totalRelays++
+		totalConns++
+		subFreq++
+		subIterations++
+
+		rl := NewRelay()
+
+		relays := make([]*Relay, int(totalRelays))
+		for i := 0; i < int(totalRelays); i++ {
+			relays[i] = NewRelay()
+		}
+
+		conns := make([]*WebSocket, int(totalConns))
+		for i := 0; i < int(totalConns); i++ {
+			ws := &WebSocket{}
+			conns[i] = ws
+			rl.clients[ws] = make([]listenerSpec, 0, subIterations)
+		}
+
+		f := nostr.Filter{Kinds: []int{1}}
+		cancel := func(cause error) {}
+
+		type wsid struct {
+			ws *WebSocket
+			id string
+		}
+
+		s := 0
+		subs := make([]wsid, 0, subIterations*totalConns*totalRelays)
+		for i, conn := range conns {
+			w := idFromSeqUpper(i)
+			for j := 0; j < int(subIterations); j++ {
+				id := w + ":" + idFromSeqLower(j)
+				for _, rlt := range relays {
+					if s%int(subFreq) == 0 {
+						rl.addListener(conn, id, rlt, f, cancel)
+						subs = append(subs, wsid{conn, id})
+					}
+					s++
+				}
+			}
+		}
+
+		for _, wsid := range subs {
+			rl.removeListenerId(wsid.ws, wsid.id)
+		}
+
+		for _, wsid := range subs {
+			require.Len(t, rl.clients[wsid.ws], 0)
+		}
+		for _, rlt := range relays {
+			require.Len(t, rlt.listeners, 0)
+		}
+	})
+}
