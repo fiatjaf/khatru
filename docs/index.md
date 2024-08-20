@@ -39,3 +39,21 @@ features:
     link: https://pkg.go.dev/github.com/fiatjaf/khatru
     details: That means it is fast and lightweight, you can learn the language in 5 minutes and it builds your relay into a single binary that's easy to ship and deploy.
 ---
+
+## A glimpse of `khatru`'s power
+
+It allows you to create a fully-functional relay in 7 lines of code:
+
+```go
+func main() {
+	relay := khatru.NewRelay()
+	db := badger.BadgerBackend{Path: "/tmp/khatru-badgern-tmp"}
+    db.Init()
+	relay.StoreEvent = append(relay.StoreEvent, db.SaveEvent)
+	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
+	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+	http.ListenAndServe(":3334", relay)
+}
+```
+
+After that you can customize it in infinite ways. See the links above.
