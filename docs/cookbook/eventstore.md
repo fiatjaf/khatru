@@ -44,7 +44,7 @@ func main() {
 }
 ```
 
-Other local key-value embedded databases that work the same way are [LMDB](https://pkg.go.dev/github.com/fiatjaf/eventstore/lmdb) and [BoltDB](https://pkg.go.dev/github.com/fiatjaf/eventstore/bolt).
+[LMDB](https://pkg.go.dev/github.com/fiatjaf/eventstore/lmdb) works the same way.
 
 [SQLite](https://pkg.go.dev/github.com/fiatjaf/eventstore/sqlite3) also stores things locally so it only needs a `Path`.
 
