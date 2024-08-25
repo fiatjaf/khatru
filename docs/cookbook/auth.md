@@ -30,7 +30,7 @@ If on `RejectFilter` or `RejectEvent` you prefix the message with `auth-required
 relay.RejectFilter = append(relay.RejectFilter, func(ctx context.Context, filter nostr.Filter) (bool, string) {
 	return true, "auth-required: this query requires you to be authenticated"
 })
-relay.RejectEvent = append(relay.RejectFilter, func(ctx context.Context, event *nostr.Event) (bool, string) {
+relay.RejectEvent = append(relay.RejectEvent, func(ctx context.Context, event *nostr.Event) (bool, string) {
 	return true, "auth-required: publishing this event requires authentication"
 })
 ```
