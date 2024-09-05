@@ -177,6 +177,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					var ok bool
 					var writeErr error
 					var skipBroadcast bool
+
 					if env.Event.Kind == 5 {
 						// this always returns "blocked: " whenever it returns an error
 						writeErr = srl.handleDeleteRequest(ctx, &env.Event)

@@ -51,13 +51,14 @@ func (rl *Relay) handleDeleteRequest(ctx context.Context, evt *nostr.Event) erro
 				// got the event, now check if the user can delete it
 				acceptDeletion := target.PubKey == evt.PubKey
 				var msg string
-				if acceptDeletion == false {
+				if !acceptDeletion {
 					msg = "you are not the author of this event"
 				}
 				// but if we have a function to overwrite this outcome, use that instead
 				for _, odo := range rl.OverwriteDeletionOutcome {
 					acceptDeletion, msg = odo(ctx, target, evt)
 				}
+
 				if acceptDeletion {
 					// delete it
 					for _, del := range rl.DeleteEvent {
