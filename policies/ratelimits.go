@@ -13,7 +13,11 @@ func EventIPRateLimiter(tokensPerInterval int, interval time.Duration, maxTokens
 	rl := startRateLimitSystem[string](tokensPerInterval, interval, maxTokens)
 
 	return func(ctx context.Context, _ *nostr.Event) (reject bool, msg string) {
-		return rl(khatru.GetIP(ctx)), "rate-limited: slow down, please"
+		ip := khatru.GetIP(ctx)
+		if ip == "" {
+			return false, ""
+		}
+		return rl(ip), "rate-limited: slow down, please"
 	}
 }
 

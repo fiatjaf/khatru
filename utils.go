@@ -41,7 +41,12 @@ func GetAuthed(ctx context.Context) string {
 }
 
 func GetIP(ctx context.Context) string {
-	return GetIPFromRequest(GetConnection(ctx).Request)
+	conn := GetConnection(ctx)
+	if conn == nil {
+		return ""
+	}
+
+	return GetIPFromRequest(conn.Request)
 }
 
 func GetSubscriptionID(ctx context.Context) string {
