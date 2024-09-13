@@ -11,6 +11,9 @@ import (
 
 // AddEvent sends an event through then normal add pipeline, as if it was received from a websocket.
 func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast bool, writeError error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if evt == nil {
 		return false, errors.New("error: event is nil")
 	}
