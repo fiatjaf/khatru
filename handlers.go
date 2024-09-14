@@ -3,7 +3,6 @@ package khatru
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"net/http"
@@ -128,9 +127,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				switch env := envelope.(type) {
 				case *nostr.EventEnvelope:
 					// check id
-					hash := sha256.Sum256(env.Event.Serialize())
-					id := hex.EncodeToString(hash[:])
-					if id != env.Event.ID {
+					if env.Event.GetID() != env.Event.ID {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "invalid: id is computed incorrectly"})
 						return
 					}
