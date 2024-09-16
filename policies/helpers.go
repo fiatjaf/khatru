@@ -1,7 +1,6 @@
 package policies
 
 import (
-	"iter"
 	"sync/atomic"
 	"time"
 
@@ -19,7 +18,7 @@ func startRateLimitSystem[K comparable](
 	go func() {
 		for {
 			time.Sleep(interval)
-			for key, bucket := range iter.Seq2[K, *atomic.Int32](negativeBuckets.Range) {
+			for key, bucket := range negativeBuckets.Range {
 				newv := bucket.Add(int32(-tokensPerInterval))
 				if newv <= 0 {
 					negativeBuckets.Delete(key)
