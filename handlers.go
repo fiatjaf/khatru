@@ -127,7 +127,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				switch env := envelope.(type) {
 				case *nostr.EventEnvelope:
 					// check id
-					if env.Event.GetID() != env.Event.ID {
+					if env.Event.CheckID() {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "invalid: id is computed incorrectly"})
 						return
 					}
