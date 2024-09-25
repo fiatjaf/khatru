@@ -10,6 +10,7 @@
 * [song](https://git.fiatjaf.com/song), a personal git server that comes with an embedded relay dedicated to dealing with [NIP-34](https://nips.nostr.com/34) git-related Nostr events
 * [relay29](https://github.com/fiatjaf/relay29), a relay that powers most of the [NIP-29](https://nips.nostr.com/29) Nostr groups ecosystem
 * [fiatjaf.com](https://fiatjaf.com), a personal website that serves the same content as HTML but also as Nostr events.
+* [gm-relay](https://github.com/ptrio42/gm-relay), a relay that only accepts GM notes once a day.
 
 ## Other possible use cases
 
