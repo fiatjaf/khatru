@@ -140,7 +140,7 @@ func (rl *Relay) notifyListeners(event *nostr.Event) {
 					return
 				}
 			}
-			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.id, Event: *event})
+			listener.ws.SendEvent(listener.id, *event)
 		}
 	}
 }
