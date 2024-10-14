@@ -60,3 +60,26 @@ relay.RejectFilter = append(relay.RejectFilter, func(ctx context.Context, filter
 	}
 })
 ```
+
+## Reacting to a successful authentication
+
+Each `khatru.WebSocket` object has an `.Authed` channel that is closed whenever that connection performs a successful authentication.
+
+You can use that to emulate a listener for these events in case you want to keep track of who is authenticating in real time and not only check it when they request for something.
+
+```go
+	relay.OnConnect = append(relay.OnConnect,
+		khatru.RequestAuth,
+		func(ctx context.Context) {
+			go func(ctx context.Context) {
+				conn := khatru.GetConnection(ctx)
+				select {
+				case <-ctx.Done():
+					fmt.Println("connection closed")
+				case <-conn.Authed:
+					fmt.Println("authenticated as", conn.AuthedPublicKey)
+				}
+			}(ctx)
+		},
+	)
+```
