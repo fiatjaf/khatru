@@ -53,6 +53,7 @@ func (rl *Relay) Shutdown(ctx context.Context) {
 	defer rl.clientsMutex.Unlock()
 	for ws := range rl.clients {
 		ws.conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
+		ws.cancel()
 		ws.conn.Close()
 	}
 	clear(rl.clients)

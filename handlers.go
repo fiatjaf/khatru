@@ -58,6 +58,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		Request:   r,
 		Challenge: hex.EncodeToString(challenge),
 	}
+	ws.Context, ws.cancel = context.WithCancel(context.Background())
 
 	rl.clientsMutex.Lock()
 	rl.clients[ws] = make([]listenerSpec, 0, 2)
@@ -77,7 +78,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 		ticker.Stop()
 		cancel()
-		conn.Close()
+		ws.cancel()
+		ws.conn.Close()
 
 		rl.removeClientAndListeners(ws)
 	}
@@ -85,10 +87,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer kill()
 
-		conn.SetReadLimit(rl.MaxMessageSize)
-		conn.SetReadDeadline(time.Now().Add(rl.PongWait))
-		conn.SetPongHandler(func(string) error {
-			conn.SetReadDeadline(time.Now().Add(rl.PongWait))
+		ws.conn.SetReadLimit(rl.MaxMessageSize)
+		ws.conn.SetReadDeadline(time.Now().Add(rl.PongWait))
+		ws.conn.SetPongHandler(func(string) error {
+			ws.conn.SetReadDeadline(time.Now().Add(rl.PongWait))
 			return nil
 		})
 
@@ -97,7 +99,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for {
-			typ, message, err := conn.ReadMessage()
+			typ, message, err := ws.conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(
 					err,
@@ -109,6 +111,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				) {
 					rl.Log.Printf("unexpected close error from %s: %v\n", r.Header.Get("X-Forwarded-For"), err)
 				}
+				ws.cancel()
 				return
 			}
 

@@ -1,6 +1,7 @@
 package khatru
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -14,6 +15,10 @@ type WebSocket struct {
 
 	// original request
 	Request *http.Request
+
+	// this Context will be canceled whenever the connection is closed from the client side or server-side.
+	Context context.Context
+	cancel  context.CancelFunc
 
 	// nip42
 	Challenge       string
