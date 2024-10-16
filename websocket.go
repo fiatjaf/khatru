@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/fasthttp/websocket"
-	"github.com/nbd-wtf/go-nostr"
 )
 
 type WebSocket struct {
@@ -38,11 +37,4 @@ func (ws *WebSocket) WriteMessage(t int, b []byte) error {
 	ws.mutex.Lock()
 	defer ws.mutex.Unlock()
 	return ws.conn.WriteMessage(t, b)
-}
-
-func (ws *WebSocket) SendEvent(subscriptionId string, event nostr.Event) error {
-	return ws.WriteJSON(nostr.EventEnvelope{
-		SubscriptionID: &subscriptionId,
-		Event:          event,
-	})
 }
