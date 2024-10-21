@@ -63,7 +63,7 @@ We can also make use of some default policies that come bundled with Khatru:
 ```go
 import "github.com/fiatjaf/khatru" // implied
 
-relay.RejectEvent = append(relay.RejectEvent, policies.PreventLargeTags, policies.PreventTimestampsInThePast(time.Hour * 2), policies.PreventTimestampsInTheFuture(time.Minute * 30))
+relay.RejectEvent = append(relay.RejectEvent, policies.PreventLargeTags(120), policies.PreventTimestampsInThePast(time.Hour * 2), policies.PreventTimestampsInTheFuture(time.Minute * 30))
 ```
 
 There are many other ways to customize the relay behavior. Take a look at the [`Relay` struct docs](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay) for more, or see the [cookbook](/cookbook/).

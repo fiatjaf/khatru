@@ -58,7 +58,7 @@ func main() {
 		policies.ValidateKind,
 
 		// define your own policies
-		policies.PreventLargeTags(80),
+		policies.PreventLargeTags(100),
 		func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
 			if event.PubKey == "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52" {
 				return true, "we don't allow this person to write here"
