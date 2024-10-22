@@ -67,11 +67,15 @@ func PreventLargeTags(maxTagValueLen int) func(context.Context, *nostr.Event) (b
 
 // RestrictToSpecifiedKinds returns a function that can be used as a RejectFilter that will reject
 // any events with kinds different than the specified ones.
-func RestrictToSpecifiedKinds(kinds ...uint16) func(context.Context, *nostr.Event) (bool, string) {
+func RestrictToSpecifiedKinds(allowEphemeral bool, kinds ...uint16) func(context.Context, *nostr.Event) (bool, string) {
 	// sort the kinds in increasing order
 	slices.Sort(kinds)
 
 	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
+		if allowEphemeral && event.IsEphemeral() {
+			return false, ""
+		}
+
 		if _, allowed := slices.BinarySearch(kinds, uint16(event.Kind)); allowed {
 			return false, ""
 		}
