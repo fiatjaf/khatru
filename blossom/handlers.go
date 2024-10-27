@@ -1,0 +1,231 @@
+package blossom
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"mime"
+	"net/http"
+	"strings"
+
+	"github.com/liamg/magic"
+	"github.com/nbd-wtf/go-nostr"
+)
+
+func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
+	auth, err := readAuthorization(r)
+	if err != nil {
+		http.Error(w, "invalid Authorization: "+err.Error(), 400)
+		return
+	}
+	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
+		http.Error(w, "invalid Authorization event \"t\" tag", 403)
+		return
+	}
+
+	b := make([]byte, 50, 1<<20 /* 1MB */)
+
+	// read first bytes of upload so we can find out the filetype
+	n, err := r.Body.Read(b)
+	if err != nil {
+		http.Error(w, "failed to read initial bytes of upload body: "+err.Error(), 400)
+		return
+	}
+	ft, _ := magic.Lookup(b)
+	if ft != nil {
+		ft.Extension = "." + ft.Extension
+	} else {
+		ft = &magic.FileType{
+			Extension: "",
+		}
+	}
+
+	// run the reject hooks
+	for _, ru := range bs.RejectUpload {
+		reject, reason := ru(r.Context(), auth, ft.Extension)
+		if reject {
+			http.Error(w, reason, 403)
+			return
+		}
+	}
+
+	// read the rest of the body
+	for {
+		n, err = r.Body.Read(b[len(b):cap(b)])
+		b = b[:len(b)+n]
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			break
+		}
+
+		if len(b) == cap(b) {
+			// add more capacity (let append pick how much)
+			b = append(b, 0)[:len(b)]
+		}
+	}
+	if err != nil {
+		http.Error(w, "failed to read upload body: "+err.Error(), 400)
+		return
+	}
+
+	// store the authorization event, it serves as a way to keep track of the uploaded blobs
+	if err := bs.Store.SaveEvent(r.Context(), auth); err != nil {
+		http.Error(w, "failed to save event: "+err.Error(), 400)
+		return
+	}
+
+	// save blob
+	hash := sha256.Sum256(b)
+	hhash := hex.EncodeToString(hash[:])
+	for _, sb := range bs.StoreBlob {
+		if err := sb(r.Context(), hhash, b); err != nil {
+			http.Error(w, "failed to save: "+err.Error(), 500)
+			return
+		}
+	}
+
+	// return response
+	json.NewEncoder(w).Encode(Blob{
+		URL:      bs.ServiceURL + "/" + hhash + ft.Extension,
+		SHA256:   hhash,
+		Size:     len(b),
+		Type:     mime.TypeByExtension(ft.Extension),
+		Uploaded: nostr.Now(),
+	})
+}
+
+func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
+	spl := strings.SplitN(r.URL.Path, ".", 2)
+	hhash := spl[0]
+	if len(hhash) != 65 {
+		http.Error(w, "invalid /<sha256>[.ext] path", 400)
+		return
+	}
+	hhash = hhash[1:]
+
+	// check for an authorization tag, if any
+	auth, err := readAuthorization(r)
+	if err != nil && err != errMissingHeader {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// if there is one, we check if it has the extra requirements
+	if auth != nil {
+		if auth.Tags.GetFirst([]string{"t", "get"}) == nil {
+			http.Error(w, "invalid Authorization event \"t\" tag", 403)
+			return
+		}
+
+		if auth.Tags.GetFirst([]string{"x", hhash}) == nil &&
+			auth.Tags.GetFirst([]string{"server", bs.ServiceURL}) == nil {
+			http.Error(w, "invalid Authorization event \"x\" or \"server\" tag", 403)
+			return
+		}
+	}
+
+	for _, rg := range bs.RejectGet {
+		reject, reason := rg(r.Context(), auth, hhash)
+		if reject {
+			http.Error(w, reason, 401)
+			return
+		}
+	}
+
+	var ext string
+	if len(spl) == 2 {
+		ext = "." + spl[1]
+	}
+
+	for _, lb := range bs.LoadBlob {
+		b, _ := lb(r.Context(), hhash)
+		if b != nil {
+			w.Header().Add("Content-Type", mime.TypeByExtension(ext))
+			w.Write(b)
+			return
+		}
+	}
+
+	http.Error(w, "file not found", 404)
+	return
+}
+
+func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
+	spl := strings.SplitN(r.URL.Path, ".", 2)
+	hhash := spl[0]
+	if len(hhash) != 65 {
+		http.Error(w, "invalid /<sha256>[.ext] path", 400)
+		return
+	}
+	hhash = hhash[1:]
+
+	ch, err := bs.Store.QueryEvents(r.Context(), nostr.Filter{Tags: nostr.TagMap{"x": []string{hhash}}})
+	if err != nil {
+		http.Error(w, "failed to query: "+err.Error(), 500)
+		return
+	}
+
+	if <-ch == nil {
+		http.Error(w, "file not found", 404)
+		return
+	}
+
+	return
+}
+
+func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
+	// check for an authorization tag, if any
+	auth, err := readAuthorization(r)
+	if err != nil && err != errMissingHeader {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// if there is one, we check if it has the extra requirements
+	if auth != nil {
+		if auth.Tags.GetFirst([]string{"t", "list"}) == nil {
+			http.Error(w, "invalid Authorization event \"t\" tag", 403)
+			return
+		}
+	}
+
+	pubkey := r.URL.Path[6:]
+
+	for _, rl := range bs.RejectList {
+		reject, reason := rl(r.Context(), auth, pubkey)
+		if reject {
+			http.Error(w, reason, 401)
+			return
+		}
+	}
+
+	ch, err := bs.Store.QueryEvents(r.Context(), nostr.Filter{Authors: []string{pubkey}})
+	if err != nil {
+		http.Error(w, "failed to query: "+err.Error(), 500)
+		return
+	}
+
+	w.Write([]byte{'['})
+	enc := json.NewEncoder(w)
+	for evt := range ch {
+		hhashTag := evt.Tags.GetFirst([]string{"x", ""})
+		enc.Encode(Blob{
+			URL:      bs.ServiceURL + "/" + (*hhashTag)[1],
+			SHA256:   (*hhashTag)[1],
+			Uploaded: evt.CreatedAt,
+		})
+	}
+	w.Write([]byte{']'})
+}
+
+func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
+}
+
+func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
+}
+
+func (bs BlossomServer) handleNegentropy(w http.ResponseWriter, r *http.Request) {
+}

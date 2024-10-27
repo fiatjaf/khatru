@@ -15,6 +15,10 @@ func (rl *Relay) Router() *http.ServeMux {
 	return rl.serveMux
 }
 
+func (rl *Relay) SetRouter(mux *http.ServeMux) {
+	rl.serveMux = mux
+}
+
 // Start creates an http server and starts listening on given host and port.
 func (rl *Relay) Start(host string, port int, started ...chan bool) error {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
