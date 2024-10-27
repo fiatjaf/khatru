@@ -10,9 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bep/debounce"
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip42"
+	"github.com/nbd-wtf/go-nostr/nip77"
+	"github.com/nbd-wtf/go-nostr/nip77/negentropy"
+	"github.com/puzpuzpuz/xsync/v3"
 	"github.com/rs/cors"
 )
 
@@ -54,9 +58,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	rand.Read(challenge)
 
 	ws := &WebSocket{
-		conn:      conn,
-		Request:   r,
-		Challenge: hex.EncodeToString(challenge),
+		conn:               conn,
+		Request:            r,
+		Challenge:          hex.EncodeToString(challenge),
+		negentropySessions: xsync.NewMapOf[string, *NegentropySession](),
 	}
 	ws.Context, ws.cancel = context.WithCancel(context.Background())
 
@@ -123,8 +128,14 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			go func(message []byte) {
 				envelope := nostr.ParseMessage(message)
 				if envelope == nil {
-					// stop silently
-					return
+					if !rl.Negentropy {
+						// stop silently
+						return
+					}
+					envelope = nip77.ParseNegMessage(message)
+					if envelope == nil {
+						return
+					}
 				}
 
 				switch env := envelope.(type) {
@@ -272,6 +283,75 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					} else {
 						ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: false, Reason: "error: failed to authenticate"})
 					}
+				case *nip77.OpenEnvelope:
+					srl := rl
+					if rl.getSubRelayFromFilter != nil {
+						srl = rl.getSubRelayFromFilter(env.Filter)
+						if !srl.Negentropy {
+							// ignore
+							return
+						}
+					}
+					vec, err := srl.startNegentropySession(ctx, env.Filter)
+					if err != nil {
+						// fail everything if any filter is rejected
+						reason := err.Error()
+						if strings.HasPrefix(reason, "auth-required:") {
+							RequestAuth(ctx)
+						}
+						ws.WriteJSON(nip77.ErrorEnvelope{SubscriptionID: env.SubscriptionID, Reason: reason})
+						return
+					}
+
+					// reconcile to get the next message and return it
+					neg := negentropy.New(vec, 1024*1024)
+					out, err := neg.Reconcile(env.Message)
+					if err != nil {
+						ws.WriteJSON(nip77.ErrorEnvelope{SubscriptionID: env.SubscriptionID, Reason: err.Error()})
+						return
+					}
+					ws.WriteJSON(nip77.MessageEnvelope{SubscriptionID: env.SubscriptionID, Message: out})
+
+					// if the message is not empty that means we'll probably have more reconciliation sessions, so store this
+					if out != "" {
+						deb := debounce.New(time.Second * 7)
+						negSession := &NegentropySession{
+							neg: neg,
+							postponeClose: func() {
+								deb(func() {
+									ws.negentropySessions.Delete(env.SubscriptionID)
+								})
+							},
+						}
+						negSession.postponeClose()
+
+						ws.negentropySessions.Store(env.SubscriptionID, negSession)
+					}
+				case *nip77.MessageEnvelope:
+					negSession, ok := ws.negentropySessions.Load(env.SubscriptionID)
+					if !ok {
+						// bad luck, your request was destroyed
+						ws.WriteJSON(nip77.ErrorEnvelope{SubscriptionID: env.SubscriptionID, Reason: "CLOSED"})
+						return
+					}
+					// reconcile to get the next message and return it
+					out, err := negSession.neg.Reconcile(env.Message)
+					if err != nil {
+						ws.WriteJSON(nip77.ErrorEnvelope{SubscriptionID: env.SubscriptionID, Reason: err.Error()})
+						ws.negentropySessions.Delete(env.SubscriptionID)
+						return
+					}
+					ws.WriteJSON(nip77.MessageEnvelope{SubscriptionID: env.SubscriptionID, Message: out})
+
+					// if there is more reconciliation to do, postpone this
+					if out != "" {
+						negSession.postponeClose()
+					} else {
+						// otherwise we can just close it
+						ws.negentropySessions.Delete(env.SubscriptionID)
+					}
+				case *nip77.CloseEnvelope:
+					ws.negentropySessions.Delete(env.SubscriptionID)
 				}
 			}(message)
 		}

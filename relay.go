@@ -46,7 +46,7 @@ func NewRelay() *Relay {
 type Relay struct {
 	ServiceURL string
 
-	// these structs keeps track of all the things that can be customized when handling events or requests
+	// hooks that will be called at various times
 	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
 	StoreEvent                []func(ctx context.Context, event *nostr.Event) error
@@ -89,6 +89,9 @@ type Relay struct {
 	clients      map[*WebSocket][]listenerSpec
 	listeners    []listener
 	clientsMutex sync.Mutex
+
+	// set this to true to support negentropy
+	Negentropy bool
 
 	// in case you call Server.Start
 	Addr       string

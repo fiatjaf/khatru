@@ -3,6 +3,7 @@ module github.com/fiatjaf/khatru
 go 1.23.1
 
 require (
+	github.com/bep/debounce v1.2.1
 	github.com/fasthttp/websocket v1.5.7
 	github.com/fiatjaf/eventstore v0.12.0
 	github.com/nbd-wtf/go-nostr v0.40.0
@@ -18,6 +19,7 @@ require (
 	github.com/aquasecurity/esquery v0.2.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.1.0 // indirect
@@ -36,6 +38,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
+	github.com/greatroar/blobloom v0.8.0 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.10 // indirect

@@ -11,10 +11,13 @@ func (rl *Relay) HandleNIP11(w http.ResponseWriter, r *http.Request) {
 	info := *rl.Info
 
 	if len(rl.DeleteEvent) > 0 {
-		info.SupportedNIPs = append(info.SupportedNIPs, 9)
+		info.AddSupportedNIP(9)
 	}
 	if len(rl.CountEvents) > 0 {
-		info.SupportedNIPs = append(info.SupportedNIPs, 45)
+		info.AddSupportedNIP(45)
+	}
+	if rl.Negentropy {
+		info.AddSupportedNIP(77)
 	}
 
 	for _, ovw := range rl.OverwriteRelayInformation {

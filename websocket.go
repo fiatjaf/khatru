@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/fasthttp/websocket"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type WebSocket struct {
@@ -23,6 +24,9 @@ type WebSocket struct {
 	Challenge       string
 	AuthedPublicKey string
 	Authed          chan struct{}
+
+	// nip77
+	negentropySessions *xsync.MapOf[string, *NegentropySession]
 
 	authLock sync.Mutex
 }
