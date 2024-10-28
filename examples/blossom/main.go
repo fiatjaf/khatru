@@ -23,7 +23,8 @@ func main() {
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
 
-	bl := blossom.New(relay, "http://localhost:3334", db)
+	bl := blossom.New(relay, "http://localhost:3334")
+	bl.Store = blossom.EventStoreBlobIndexWrapper{Store: db, ServiceURL: bl.ServiceURL}
 	bl.StoreBlob = append(bl.StoreBlob, func(ctx context.Context, sha256 string, body []byte) error {
 		fmt.Println("storing", sha256, len(body))
 		return nil

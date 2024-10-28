@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fiatjaf/eventstore"
 	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
 )
 
 type BlossomServer struct {
 	ServiceURL string
-	Store      eventstore.Store
+	Store      BlobIndex
 
 	StoreBlob  []func(ctx context.Context, sha256 string, body []byte) error
 	LoadBlob   []func(ctx context.Context, sha256 string) ([]byte, error)
@@ -21,12 +20,12 @@ type BlossomServer struct {
 	RejectUpload []func(ctx context.Context, auth *nostr.Event, ext string) (bool, string)
 	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string)
 	RejectList   []func(ctx context.Context, auth *nostr.Event, pubkey string) (bool, string)
+	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string)
 }
 
-func New(rl *khatru.Relay, serviceURL string, store eventstore.Store) *BlossomServer {
+func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 	bs := &BlossomServer{
 		ServiceURL: serviceURL,
-		Store:      store,
 	}
 
 	base := rl.Router()

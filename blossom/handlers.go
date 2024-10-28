@@ -71,15 +71,23 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// store the authorization event, it serves as a way to keep track of the uploaded blobs
-	if err := bs.Store.SaveEvent(r.Context(), auth); err != nil {
+	hash := sha256.Sum256(b)
+	hhash := hex.EncodeToString(hash[:])
+
+	// keep track of the blob descriptor
+	bd := BlobDescriptor{
+		URL:      bs.ServiceURL + "/" + hhash + ft.Extension,
+		SHA256:   hhash,
+		Size:     len(b),
+		Type:     mime.TypeByExtension(ft.Extension),
+		Uploaded: nostr.Now(),
+	}
+	if err := bs.Store.Keep(r.Context(), bd, auth.PubKey); err != nil {
 		http.Error(w, "failed to save event: "+err.Error(), 400)
 		return
 	}
 
 	// save blob
-	hash := sha256.Sum256(b)
-	hhash := hex.EncodeToString(hash[:])
 	for _, sb := range bs.StoreBlob {
 		if err := sb(r.Context(), hhash, b); err != nil {
 			http.Error(w, "failed to save: "+err.Error(), 500)
@@ -88,13 +96,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return response
-	json.NewEncoder(w).Encode(Blob{
-		URL:      bs.ServiceURL + "/" + hhash + ft.Extension,
-		SHA256:   hhash,
-		Size:     len(b),
-		Type:     mime.TypeByExtension(ft.Extension),
-		Uploaded: nostr.Now(),
-	})
+	json.NewEncoder(w).Encode(bd)
 }
 
 func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
@@ -162,13 +164,13 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	hhash = hhash[1:]
 
-	ch, err := bs.Store.QueryEvents(r.Context(), nostr.Filter{Tags: nostr.TagMap{"x": []string{hhash}}})
+	bd, err := bs.Store.Get(r.Context(), hhash)
 	if err != nil {
 		http.Error(w, "failed to query: "+err.Error(), 500)
 		return
 	}
 
-	if <-ch == nil {
+	if bd == nil {
 		http.Error(w, "file not found", 404)
 		return
 	}
@@ -202,7 +204,7 @@ func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ch, err := bs.Store.QueryEvents(r.Context(), nostr.Filter{Authors: []string{pubkey}})
+	ch, err := bs.Store.List(r.Context(), pubkey)
 	if err != nil {
 		http.Error(w, "failed to query: "+err.Error(), 500)
 		return
@@ -210,18 +212,56 @@ func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte{'['})
 	enc := json.NewEncoder(w)
-	for evt := range ch {
-		hhashTag := evt.Tags.GetFirst([]string{"x", ""})
-		enc.Encode(Blob{
-			URL:      bs.ServiceURL + "/" + (*hhashTag)[1],
-			SHA256:   (*hhashTag)[1],
-			Uploaded: evt.CreatedAt,
-		})
+	for bd := range ch {
+		enc.Encode(bd)
 	}
 	w.Write([]byte{']'})
 }
 
 func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
+	auth, err := readAuthorization(r)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if auth.Tags.GetFirst([]string{"t", "delete"}) == nil {
+		http.Error(w, "invalid Authorization event \"t\" tag", 403)
+		return
+	}
+
+	spl := strings.SplitN(r.URL.Path, ".", 2)
+	hhash := spl[0]
+	if len(hhash) != 65 {
+		http.Error(w, "invalid /<sha256>[.ext] path", 400)
+		return
+	}
+	hhash = hhash[1:]
+	if auth.Tags.GetFirst([]string{"x", hhash}) == nil &&
+		auth.Tags.GetFirst([]string{"server", bs.ServiceURL}) == nil {
+		http.Error(w, "invalid Authorization event \"x\" or \"server\" tag", 403)
+		return
+	}
+
+	for _, rd := range bs.RejectDelete {
+		reject, reason := rd(r.Context(), auth, hhash)
+		if reject {
+			http.Error(w, reason, 401)
+			return
+		}
+	}
+
+	for _, del := range bs.DeleteBlob {
+		if err := del(r.Context(), hhash); err != nil {
+			http.Error(w, "failed to delete blob: "+err.Error(), 500)
+			return
+		}
+	}
+
+	if err := bs.Store.Delete(r.Context(), hhash, auth.PubKey); err != nil {
+		http.Error(w, "delete of blob entry failed: "+err.Error(), 500)
+		return
+	}
 }
 
 func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
