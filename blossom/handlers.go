@@ -43,9 +43,9 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// run the reject hooks
 	for _, ru := range bs.RejectUpload {
-		reject, reason := ru(r.Context(), auth, ft.Extension)
+		reject, reason, code := ru(r.Context(), auth, ft.Extension)
 		if reject {
-			http.Error(w, reason, 403)
+			http.Error(w, reason, code)
 			return
 		}
 	}
@@ -130,9 +130,9 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, rg := range bs.RejectGet {
-		reject, reason := rg(r.Context(), auth, hhash)
+		reject, reason, code := rg(r.Context(), auth, hhash)
 		if reject {
-			http.Error(w, reason, 401)
+			http.Error(w, reason, code)
 			return
 		}
 	}
@@ -197,9 +197,9 @@ func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 	pubkey := r.URL.Path[6:]
 
 	for _, rl := range bs.RejectList {
-		reject, reason := rl(r.Context(), auth, pubkey)
+		reject, reason, code := rl(r.Context(), auth, pubkey)
 		if reject {
-			http.Error(w, reason, 401)
+			http.Error(w, reason, code)
 			return
 		}
 	}
@@ -244,9 +244,9 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, rd := range bs.RejectDelete {
-		reject, reason := rd(r.Context(), auth, hhash)
+		reject, reason, code := rd(r.Context(), auth, hhash)
 		if reject {
-			http.Error(w, reason, 401)
+			http.Error(w, reason, code)
 			return
 		}
 	}

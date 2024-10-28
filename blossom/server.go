@@ -17,10 +17,10 @@ type BlossomServer struct {
 	LoadBlob   []func(ctx context.Context, sha256 string) ([]byte, error)
 	DeleteBlob []func(ctx context.Context, sha256 string) error
 
-	RejectUpload []func(ctx context.Context, auth *nostr.Event, ext string) (bool, string)
-	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string)
-	RejectList   []func(ctx context.Context, auth *nostr.Event, pubkey string) (bool, string)
-	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string)
+	RejectUpload []func(ctx context.Context, auth *nostr.Event, ext string) (bool, string, int)
+	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
+	RejectList   []func(ctx context.Context, auth *nostr.Event, pubkey string) (bool, string, int)
+	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
 }
 
 func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
