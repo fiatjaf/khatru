@@ -264,6 +264,29 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request) {
+	auth, err := readAuthorization(r)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	mimetype := r.Header.Get("X-Content-Type")
+	exts, _ := mime.ExtensionsByType(mimetype)
+	var ext string
+	if len(exts) > 0 {
+		ext = exts[0]
+	}
+
+	for _, rb := range bs.RejectUpload {
+		reject, reason, code := rb(r.Context(), auth, ext)
+		if reject {
+			http.Error(w, reason, code)
+			return
+		}
+	}
+}
+
 func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
 }
 

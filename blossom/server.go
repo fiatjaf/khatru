@@ -32,10 +32,16 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/upload" && r.Method == "PUT" {
-			setCors(w)
-			bs.handleUpload(w, r)
-			return
+		if r.URL.Path == "/upload" {
+			if r.Method == "PUT" {
+				setCors(w)
+				bs.handleUpload(w, r)
+				return
+			} else if r.Method == "HEAD" {
+				setCors(w)
+				bs.handleUploadCheck(w, r)
+				return
+			}
 		}
 
 		if strings.HasPrefix(r.URL.Path, "/list/") && r.Method == "GET" {
