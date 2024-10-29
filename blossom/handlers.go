@@ -7,11 +7,45 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/liamg/magic"
 	"github.com/nbd-wtf/go-nostr"
 )
+
+func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request) {
+	auth, err := readAuthorization(r)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	if auth != nil {
+		if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
+			http.Error(w, "invalid Authorization event \"t\" tag", 403)
+			return
+		}
+	}
+
+	mimetype := r.Header.Get("X-Content-Type")
+	exts, _ := mime.ExtensionsByType(mimetype)
+	var ext string
+	if len(exts) > 0 {
+		ext = exts[0]
+	}
+
+	// get the file size from the incoming header
+	size, _ := strconv.Atoi(r.Header.Get("X-Content-Length"))
+
+	for _, rb := range bs.RejectUpload {
+		reject, reason, code := rb(r.Context(), auth, size, ext)
+		if reject {
+			http.Error(w, reason, code)
+			return
+		}
+	}
+}
 
 func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	auth, err := readAuthorization(r)
@@ -19,39 +53,46 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid Authorization: "+err.Error(), 400)
 		return
 	}
-	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
-		http.Error(w, "invalid Authorization event \"t\" tag", 403)
-		return
+
+	if auth != nil {
+		if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
+			http.Error(w, "invalid Authorization event \"t\" tag", 403)
+			return
+		}
 	}
 
-	b := make([]byte, 50, 1<<20 /* 1MB */)
+	// get the file size from the incoming header
+	size, _ := strconv.Atoi(r.Header.Get("Content-Length"))
 
 	// read first bytes of upload so we can find out the filetype
-	n, err := r.Body.Read(b)
-	if err != nil {
+	b := make([]byte, 50, size)
+	if _, err = r.Body.Read(b); err != nil {
 		http.Error(w, "failed to read initial bytes of upload body: "+err.Error(), 400)
 		return
 	}
-	ft, _ := magic.Lookup(b)
-	if ft != nil {
-		ft.Extension = "." + ft.Extension
+	var ext string
+	if ft, _ := magic.Lookup(b); ft != nil {
+		ext = "." + ft.Extension
 	} else {
-		ft = &magic.FileType{
-			Extension: "",
+		// if we can't find, use the filetype given by the upload header
+		mimetype := r.Header.Get("Content-Type")
+		if exts, _ := mime.ExtensionsByType(mimetype); len(exts) > 0 {
+			ext = exts[0]
 		}
 	}
 
 	// run the reject hooks
 	for _, ru := range bs.RejectUpload {
-		reject, reason, code := ru(r.Context(), auth, ft.Extension)
+		reject, reason, code := ru(r.Context(), auth, size, ext)
 		if reject {
 			http.Error(w, reason, code)
 			return
 		}
 	}
 
-	// read the rest of the body
+	// if it passes then we have to read the entire thing into memory so we can compute the sha256
 	for {
+		var n int
 		n, err = r.Body.Read(b[len(b):cap(b)])
 		b = b[:len(b)+n]
 		if err != nil {
@@ -60,9 +101,9 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		}
-
 		if len(b) == cap(b) {
 			// add more capacity (let append pick how much)
+			// if Content-Length was correct we shouldn't reach this
 			b = append(b, 0)[:len(b)]
 		}
 	}
@@ -76,10 +117,10 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// keep track of the blob descriptor
 	bd := BlobDescriptor{
-		URL:      bs.ServiceURL + "/" + hhash + ft.Extension,
+		URL:      bs.ServiceURL + "/" + hhash + ext,
 		SHA256:   hhash,
 		Size:     len(b),
-		Type:     mime.TypeByExtension(ft.Extension),
+		Type:     mime.TypeByExtension(ext),
 		Uploaded: nostr.Now(),
 	}
 	if err := bs.Store.Keep(r.Context(), bd, auth.PubKey); err != nil {
@@ -87,7 +128,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// save blob
+	// save actual blob
 	for _, sb := range bs.StoreBlob {
 		if err := sb(r.Context(), hhash, b); err != nil {
 			http.Error(w, "failed to save: "+err.Error(), 500)
@@ -110,7 +151,7 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 
 	// check for an authorization tag, if any
 	auth, err := readAuthorization(r)
-	if err != nil && err != errMissingHeader {
+	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -143,10 +184,10 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, lb := range bs.LoadBlob {
-		b, _ := lb(r.Context(), hhash)
-		if b != nil {
+		reader, _ := lb(r.Context(), hhash)
+		if reader != nil {
 			w.Header().Add("Content-Type", mime.TypeByExtension(ext))
-			w.Write(b)
+			io.Copy(w, reader)
 			return
 		}
 	}
@@ -181,7 +222,7 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 	// check for an authorization tag, if any
 	auth, err := readAuthorization(r)
-	if err != nil && err != errMissingHeader {
+	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
@@ -225,9 +266,11 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if auth.Tags.GetFirst([]string{"t", "delete"}) == nil {
-		http.Error(w, "invalid Authorization event \"t\" tag", 403)
-		return
+	if auth != nil {
+		if auth.Tags.GetFirst([]string{"t", "delete"}) == nil {
+			http.Error(w, "invalid Authorization event \"t\" tag", 403)
+			return
+		}
 	}
 
 	spl := strings.SplitN(r.URL.Path, ".", 2)
@@ -261,29 +304,6 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	if err := bs.Store.Delete(r.Context(), hhash, auth.PubKey); err != nil {
 		http.Error(w, "delete of blob entry failed: "+err.Error(), 500)
 		return
-	}
-}
-
-func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request) {
-	auth, err := readAuthorization(r)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	mimetype := r.Header.Get("X-Content-Type")
-	exts, _ := mime.ExtensionsByType(mimetype)
-	var ext string
-	if len(exts) > 0 {
-		ext = exts[0]
-	}
-
-	for _, rb := range bs.RejectUpload {
-		reject, reason, code := rb(r.Context(), auth, ext)
-		if reject {
-			http.Error(w, reason, code)
-			return
-		}
 	}
 }
 

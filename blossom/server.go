@@ -2,6 +2,7 @@ package blossom
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strings"
 
@@ -14,10 +15,10 @@ type BlossomServer struct {
 	Store      BlobIndex
 
 	StoreBlob  []func(ctx context.Context, sha256 string, body []byte) error
-	LoadBlob   []func(ctx context.Context, sha256 string) ([]byte, error)
+	LoadBlob   []func(ctx context.Context, sha256 string) (io.Reader, error)
 	DeleteBlob []func(ctx context.Context, sha256 string) error
 
-	RejectUpload []func(ctx context.Context, auth *nostr.Event, ext string) (bool, string, int)
+	RejectUpload []func(ctx context.Context, auth *nostr.Event, size int, ext string) (bool, string, int)
 	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
 	RejectList   []func(ctx context.Context, auth *nostr.Event, pubkey string) (bool, string, int)
 	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)

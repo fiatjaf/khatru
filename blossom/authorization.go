@@ -13,12 +13,10 @@ import (
 	"github.com/nbd-wtf/go-nostr"
 )
 
-var errMissingHeader = fmt.Errorf("missing header")
-
 func readAuthorization(r *http.Request) (*nostr.Event, error) {
 	token := r.Header.Get("Authorization")
 	if !strings.HasPrefix(token, "Nostr ") {
-		return nil, errMissingHeader
+		return nil, nil
 	}
 
 	var reader io.Reader
