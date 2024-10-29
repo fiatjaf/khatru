@@ -2,7 +2,6 @@ package blossom
 
 import (
 	"context"
-	"mime"
 	"strconv"
 
 	"github.com/fiatjaf/eventstore"
@@ -53,6 +52,7 @@ func (es EventStoreBlobIndexWrapper) List(ctx context.Context, pubkey string) (c
 		for evt := range ech {
 			ch <- es.parseEvent(evt)
 		}
+		close(ch)
 	}()
 
 	return ch, nil
@@ -90,11 +90,7 @@ func (es EventStoreBlobIndexWrapper) Delete(ctx context.Context, sha256 string, 
 func (es EventStoreBlobIndexWrapper) parseEvent(evt *nostr.Event) BlobDescriptor {
 	hhash := evt.Tags[0][1]
 	mimetype := evt.Tags[1][1]
-	exts, _ := mime.ExtensionsByType(mimetype)
-	var ext string
-	if exts != nil {
-		ext = exts[0]
-	}
+	ext := getExtension(mimetype)
 	size, _ := strconv.Atoi(evt.Tags[2][1])
 
 	return BlobDescriptor{

@@ -13,7 +13,7 @@ type BlobDescriptor struct {
 	Type     string          `json:"type"`
 	Uploaded nostr.Timestamp `json:"uploaded"`
 
-	Owner string
+	Owner string `json:"-"`
 }
 
 type BlobIndex interface {
