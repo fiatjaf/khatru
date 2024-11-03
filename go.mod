@@ -5,9 +5,9 @@ go 1.23.1
 require (
 	github.com/bep/debounce v1.2.1
 	github.com/fasthttp/websocket v1.5.7
-	github.com/fiatjaf/eventstore v0.12.0
+	github.com/fiatjaf/eventstore v0.13.0
 	github.com/liamg/magic v0.0.1
-	github.com/nbd-wtf/go-nostr v0.40.0
+	github.com/nbd-wtf/go-nostr v0.42.0
 	github.com/puzpuzpuz/xsync/v3 v3.4.0
 	github.com/rs/cors v1.7.0
 	github.com/stretchr/testify v1.9.0

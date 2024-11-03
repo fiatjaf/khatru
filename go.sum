@@ -53,8 +53,8 @@ github.com/fasthttp/websocket v1.5.7 h1:0a6o2OfeATvtGgoMKleURhLT6JqWPg7fYfWnH4KH
 github.com/fasthttp/websocket v1.5.7/go.mod h1:bC4fxSono9czeXHQUVKxsC0sNjbm7lPJR04GDFqClfU=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
-github.com/fiatjaf/eventstore v0.12.0 h1:ZdL+dZkIgBgIp5A3+3XLdPg/uucv5Tiws6DHzNfZG4M=
-github.com/fiatjaf/eventstore v0.12.0/go.mod h1:PxeYbZ3MsH0XLobANsp6c0cJjJYkfmBJ3TwrplFy/08=
+github.com/fiatjaf/eventstore v0.13.0 h1:60cE/oIUdVHoE6aOayjIyubiQIhMW6jezLjdvcl29Y4=
+github.com/fiatjaf/eventstore v0.13.0/go.mod h1:XOl5B6WGBX1a0ww6s3WT94QVOmye/6zDTtyWHVtHQ5U=
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/go-sql-driver/mysql v1.7.1 h1:lUIinVbN1DY0xBg0eMOzmmtGoHwWBbvnWubQUrtU8EI=
 github.com/go-sql-driver/mysql v1.7.1/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
@@ -121,8 +121,8 @@ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJ
 github.com/mattn/go-sqlite3 v1.14.6/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
 github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
-github.com/nbd-wtf/go-nostr v0.40.0 h1:ea7FlOsm4kO1071Tm4OT0lXTcyleiZCT9Ll4XERjTZw=
-github.com/nbd-wtf/go-nostr v0.40.0/go.mod h1:FBa4FBJO7NuANvkeKSlrf0BIyxGufmrUbuelr6Q4Ick=
+github.com/nbd-wtf/go-nostr v0.42.0 h1:EofWfXEhKic9AYVf4RHuXZr+kKUZE2jVyJtJByNe1rE=
+github.com/nbd-wtf/go-nostr v0.42.0/go.mod h1:FBa4FBJO7NuANvkeKSlrf0BIyxGufmrUbuelr6Q4Ick=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

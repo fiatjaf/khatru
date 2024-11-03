@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fiatjaf/eventstore"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip77/negentropy"
 	"github.com/nbd-wtf/go-nostr/nip77/negentropy/storage/vector"
@@ -16,6 +17,8 @@ type NegentropySession struct {
 }
 
 func (rl *Relay) startNegentropySession(ctx context.Context, filter nostr.Filter) (*vector.Vector, error) {
+	ctx = eventstore.SetNegentropy(ctx)
+
 	// do the same overwrite/reject flow we do in normal REQs
 	for _, ovw := range rl.OverwriteFilter {
 		ovw(ctx, &filter)
