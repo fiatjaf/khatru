@@ -9,7 +9,7 @@ require (
 	github.com/liamg/magic v0.0.1
 	github.com/nbd-wtf/go-nostr v0.42.0
 	github.com/puzpuzpuz/xsync/v3 v3.4.0
-	github.com/rs/cors v1.7.0
+	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.9.0
 )
 
