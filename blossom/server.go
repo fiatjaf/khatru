@@ -3,11 +3,9 @@ package blossom
 import (
 	"context"
 	"io"
-	"net/http"
 
 	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
-	"github.com/rs/cors"
 )
 
 type BlossomServer struct {
@@ -29,30 +27,14 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 		ServiceURL: serviceURL,
 	}
 
-	base := rl.Router()
+	mux := rl.Router()
 
-	blossomApi := http.NewServeMux()
-	blossomApi.HandleFunc("PUT /upload", bs.handleUpload)
-	blossomApi.HandleFunc("HEAD /upload", bs.handleUploadCheck)
-	blossomApi.HandleFunc("GET /list/{pubkey}", bs.handleList)
-	blossomApi.HandleFunc("HEAD /{sha256}", bs.handleHasBlob)
-	blossomApi.HandleFunc("GET /{sha256}", bs.handleGetBlob)
-	blossomApi.HandleFunc("DELETE /{sha256}", bs.handleDelete)
-	blossomApi.Handle("/", base) // forwards to relay
-
-	bud01CorsMux := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "PUT", "DELETE"},
-		AllowedHeaders: []string{"Authorization", "*"},
-		MaxAge:         86400,
-	})
-
-	wrappedBlossomApi := bud01CorsMux.Handler(blossomApi)
-
-	combinedMux := http.NewServeMux()
-	combinedMux.Handle("/", wrappedBlossomApi)
-
-	rl.SetRouter(combinedMux)
+	mux.HandleFunc("PUT /upload", bs.handleUpload)
+	mux.HandleFunc("HEAD /upload", bs.handleUploadCheck)
+	mux.HandleFunc("GET /list/{pubkey}", bs.handleList)
+	mux.HandleFunc("HEAD /{sha256}", bs.handleHasBlob)
+	mux.HandleFunc("GET /{sha256}", bs.handleGetBlob)
+	mux.HandleFunc("DELETE /{sha256}", bs.handleDelete)
 
 	return bs
 }
