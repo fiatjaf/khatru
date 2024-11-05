@@ -3,6 +3,8 @@ package blossom
 import (
 	"context"
 	"io"
+	"net/http"
+	"strings"
 
 	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
@@ -27,14 +29,42 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 		ServiceURL: serviceURL,
 	}
 
-	mux := rl.Router()
+	base := rl.Router()
+	mux := http.NewServeMux()
 
-	mux.HandleFunc("PUT /upload", bs.handleUpload)
-	mux.HandleFunc("HEAD /upload", bs.handleUploadCheck)
-	mux.HandleFunc("GET /list/{pubkey}", bs.handleList)
-	mux.HandleFunc("HEAD /{sha256}", bs.handleHasBlob)
-	mux.HandleFunc("GET /{sha256}", bs.handleGetBlob)
-	mux.HandleFunc("DELETE /{sha256}", bs.handleDelete)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/upload" {
+			if r.Method == "PUT" {
+				bs.handleUpload(w, r)
+				return
+			} else if r.Method == "HEAD" {
+				bs.handleUploadCheck(w, r)
+				return
+			}
+		}
+
+		if strings.HasPrefix(r.URL.Path, "/list/") && r.Method == "GET" {
+			bs.handleList(w, r)
+			return
+		}
+
+		if len(strings.SplitN(r.URL.Path, ".", 2)[0]) == 65 {
+			if r.Method == "HEAD" {
+				bs.handleHasBlob(w, r)
+				return
+			} else if r.Method == "GET" {
+				bs.handleGetBlob(w, r)
+				return
+			} else if r.Method == "DELETE" {
+				bs.handleDelete(w, r)
+				return
+			}
+		}
+
+		base.ServeHTTP(w, r)
+	})
+
+	rl.SetRouter(mux)
 
 	return bs
 }
