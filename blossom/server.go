@@ -31,8 +31,6 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 
 	base := rl.Router()
 
-	combinedMux := http.NewServeMux()
-
 	blossomApi := http.NewServeMux()
 	blossomApi.HandleFunc("PUT /upload", bs.handleUpload)
 	blossomApi.HandleFunc("HEAD /upload", bs.handleUploadCheck)
@@ -40,6 +38,7 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 	blossomApi.HandleFunc("HEAD /{sha256}", bs.handleHasBlob)
 	blossomApi.HandleFunc("GET /{sha256}", bs.handleGetBlob)
 	blossomApi.HandleFunc("DELETE /{sha256}", bs.handleDelete)
+	blossomApi.Handle("/", base) // forwards to relay
 
 	bud01CorsMux := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
@@ -50,13 +49,8 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 
 	wrappedBlossomApi := bud01CorsMux.Handler(blossomApi)
 
-	combinedMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if _, pattern := blossomApi.Handler(r); pattern != "" {
-			wrappedBlossomApi.ServeHTTP(w, r)
-		} else {
-			base.ServeHTTP(w, r)
-		}
-	})
+	combinedMux := http.NewServeMux()
+	combinedMux.Handle("/", wrappedBlossomApi)
 
 	rl.SetRouter(combinedMux)
 
