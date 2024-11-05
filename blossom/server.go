@@ -2,13 +2,12 @@ package blossom
 
 import (
 	"context"
-	"github.com/rs/cors"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/rs/cors"
 )
 
 type BlossomServer struct {
@@ -31,54 +30,34 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 	}
 
 	base := rl.Router()
-	mux := http.NewServeMux()
+
+	combinedMux := http.NewServeMux()
+
 	blossomApi := http.NewServeMux()
+	blossomApi.HandleFunc("PUT /upload", bs.handleUpload)
+	blossomApi.HandleFunc("HEAD /upload", bs.handleUploadCheck)
+	blossomApi.HandleFunc("GET /list/{pubkey}", bs.handleList)
+	blossomApi.HandleFunc("HEAD /{sha256}", bs.handleHasBlob)
+	blossomApi.HandleFunc("GET /{sha256}", bs.handleGetBlob)
+	blossomApi.HandleFunc("DELETE /{sha256}", bs.handleDelete)
 
-	blossomApi.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		if r.URL.Path == "/upload" {
-			if r.Method == "PUT" {
-				bs.handleUpload(w, r)
-				return
-			} else if r.Method == "HEAD" {
-				bs.handleUploadCheck(w, r)
-				return
-			}
-		}
-
-		if strings.HasPrefix(r.URL.Path, "/list/") && r.Method == "GET" {
-			bs.handleList(w, r)
-			return
-		}
-
-		if len(strings.SplitN(r.URL.Path, ".", 2)[0]) == 65 {
-			if r.Method == "HEAD" {
-				bs.handleHasBlob(w, r)
-				return
-			} else if r.Method == "GET" {
-				bs.handleGetBlob(w, r)
-				return
-			} else if r.Method == "DELETE" {
-				bs.handleDelete(w, r)
-				return
-			}
-		}
-
-		base.ServeHTTP(w, r)
-	})
-
-	bud01corsHeaders := cors.New(cors.Options{
+	bud01CorsMux := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "PUT", "DELETE"},
 		AllowedHeaders: []string{"Authorization", "*"},
 	})
 
-	mux.Handle("/", bud01corsHeaders.Handler(blossomApi))
-	rl.SetRouter(mux)
+	wrappedBlossomApi := bud01CorsMux.Handler(blossomApi)
+
+	combinedMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if _, pattern := blossomApi.Handler(r); pattern != "" {
+			wrappedBlossomApi.ServeHTTP(w, r)
+		} else {
+			base.ServeHTTP(w, r)
+		}
+	})
+
+	rl.SetRouter(combinedMux)
 
 	return bs
 }
