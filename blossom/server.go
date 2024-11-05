@@ -45,6 +45,7 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "PUT", "DELETE"},
 		AllowedHeaders: []string{"Authorization", "*"},
+		MaxAge:         86400,
 	})
 
 	wrappedBlossomApi := bud01CorsMux.Handler(blossomApi)
