@@ -72,7 +72,7 @@ func RestrictToSpecifiedKinds(allowEphemeral bool, kinds ...uint16) func(context
 	slices.Sort(kinds)
 
 	return func(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
-		if allowEphemeral && event.IsEphemeral() {
+		if allowEphemeral && nostr.IsEphemeralKind(event.Kind) {
 			return false, ""
 		}
 
