@@ -26,14 +26,28 @@ func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		rl.ServiceURL = getServiceBaseURL(r)
 	}
 
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowedHeaders: []string{"Authorization", "*"},
+		MaxAge:         86400,
+	})
+
 	if r.Header.Get("Upgrade") == "websocket" {
 		rl.HandleWebsocket(w, r)
 	} else if r.Header.Get("Accept") == "application/nostr+json" {
-		cors.AllowAll().Handler(http.HandlerFunc(rl.HandleNIP11)).ServeHTTP(w, r)
+		corsMiddleware.Handler(http.HandlerFunc(rl.HandleNIP11)).ServeHTTP(w, r)
 	} else if r.Header.Get("Content-Type") == "application/nostr+json+rpc" {
-		cors.AllowAll().Handler(http.HandlerFunc(rl.HandleNIP86)).ServeHTTP(w, r)
+		corsMiddleware.Handler(http.HandlerFunc(rl.HandleNIP86)).ServeHTTP(w, r)
 	} else {
-		rl.serveMux.ServeHTTP(w, r)
+		corsMiddleware.Handler(rl.serveMux).ServeHTTP(w, r)
 	}
 }
 

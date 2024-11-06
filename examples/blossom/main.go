@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/fiatjaf/eventstore/badger"
 	"github.com/fiatjaf/khatru"
@@ -29,9 +31,10 @@ func main() {
 		fmt.Println("storing", sha256, len(body))
 		return nil
 	})
-	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string) ([]byte, error) {
+	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string) (io.Reader, error) {
 		fmt.Println("loading", sha256)
-		return []byte("aaaaa"), nil
+		blob := strings.NewReader("aaaaa")
+		return blob, nil
 	})
 
 	fmt.Println("running on :3334")
