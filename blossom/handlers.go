@@ -199,6 +199,7 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 				http.ServeContent(w, r, hhash+ext, descriptor.Uploaded.Time(), readSeeker)
 			} else {
 				// if not a readseeker, or no descriptor reverts to previous behaviour
+				fmt.Println("serving content without descriptor", ok, err, descriptor)
 				io.Copy(w, reader)
 			}
 			return
