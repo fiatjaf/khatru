@@ -15,7 +15,7 @@ type BlossomServer struct {
 	Store      BlobIndex
 
 	StoreBlob  []func(ctx context.Context, sha256 string, body []byte) error
-	LoadBlob   []func(ctx context.Context, sha256 string) (io.Reader, error)
+	LoadBlob   []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
 	DeleteBlob []func(ctx context.Context, sha256 string) error
 
 	RejectUpload []func(ctx context.Context, auth *nostr.Event, size int, ext string) (bool, string, int)

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/liamg/magic"
 	"github.com/nbd-wtf/go-nostr"
@@ -190,15 +191,14 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 	for _, lb := range bs.LoadBlob {
 		reader, _ := lb(r.Context(), hhash)
 		if reader != nil {
-			w.Header().Add("Content-Type", mime.TypeByExtension(ext))
+			// use unix epoch as the time if we can't find the descriptor
+			// as described in the http.ServeContent documentation
+			t := time.Unix(0, 0)
 			descriptor, err := bs.Store.Get(r.Context(), hhash)
-			readSeeker, ok := reader.(io.ReadSeeker)
-			if ok && err == nil && descriptor != nil {
-				http.ServeContent(w, r, hhash+ext, descriptor.Uploaded.Time(), readSeeker)
-			} else {
-				// if not a readseeker, or no descriptor reverts to previous behaviour
-				io.Copy(w, reader)
+			if err == nil && descriptor != nil {
+				t = descriptor.Uploaded.Time()
 			}
+			http.ServeContent(w, r, hhash+ext, t, reader)
 			return
 		}
 	}
