@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -195,11 +194,9 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 			descriptor, err := bs.Store.Get(r.Context(), hhash)
 			readSeeker, ok := reader.(io.ReadSeeker)
 			if ok && err == nil && descriptor != nil {
-				fmt.Println("serving content", descriptor)
 				http.ServeContent(w, r, hhash+ext, descriptor.Uploaded.Time(), readSeeker)
 			} else {
 				// if not a readseeker, or no descriptor reverts to previous behaviour
-				fmt.Println("serving content without descriptor", ok, err, descriptor)
 				io.Copy(w, reader)
 			}
 			return
