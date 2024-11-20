@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -191,7 +192,15 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 		reader, _ := lb(r.Context(), hhash)
 		if reader != nil {
 			w.Header().Add("Content-Type", mime.TypeByExtension(ext))
-			io.Copy(w, reader)
+			descriptor, err := bs.Store.Get(r.Context(), hhash)
+			readSeeker, ok := reader.(io.ReadSeeker)
+			if ok && err == nil && descriptor != nil {
+				fmt.Println("serving content", descriptor)
+				http.ServeContent(w, r, hhash+ext, descriptor.Uploaded.Time(), readSeeker)
+			} else {
+				// if not a readseeker, or no descriptor reverts to previous behaviour
+				io.Copy(w, reader)
+			}
 			return
 		}
 	}
