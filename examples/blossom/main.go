@@ -31,7 +31,7 @@ func main() {
 		fmt.Println("storing", sha256, len(body))
 		return nil
 	})
-	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string) (io.Reader, error) {
+	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string) (io.ReadSeeker, error) {
 		fmt.Println("loading", sha256)
 		blob := strings.NewReader("aaaaa")
 		return blob, nil
