@@ -264,7 +264,13 @@ func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte{'['})
 	enc := json.NewEncoder(w)
+	first := true
 	for bd := range ch {
+		if !first {
+			w.Write([]byte{','})
+		} else {
+			first = false
+		}
 		enc.Encode(bd)
 	}
 	w.Write([]byte{']'})
