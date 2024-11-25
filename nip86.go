@@ -65,16 +65,22 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 			resp.Error = "missing auth"
 			goto respond
 		}
-		if evtj, err := base64.StdEncoding.DecodeString(spl[1]); err != nil {
+
+		evtj, err := base64.StdEncoding.DecodeString(spl[1])
+		if err != nil {
 			resp.Error = "invalid base64 auth"
 			goto respond
-		} else if err := json.Unmarshal(evtj, &evt); err != nil {
+		}
+		if err := json.Unmarshal(evtj, &evt); err != nil {
 			resp.Error = "invalid auth event json"
 			goto respond
-		} else if ok, _ := evt.CheckSignature(); !ok {
+		}
+		if ok, _ := evt.CheckSignature(); !ok {
 			resp.Error = "invalid auth event"
 			goto respond
-		} else if uTag := evt.Tags.GetFirst([]string{"u", ""}); uTag == nil || getServiceBaseURL(r) != (*uTag)[1] {
+		}
+
+		if uTag := evt.Tags.GetFirst([]string{"u", ""}); uTag == nil || rl.ServiceURL != (*uTag)[1] {
 			resp.Error = "invalid 'u' tag"
 			goto respond
 		} else if pht := evt.Tags.GetFirst([]string{"payload", hex.EncodeToString(payloadHash[:])}); pht == nil {
