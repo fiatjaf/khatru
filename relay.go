@@ -11,6 +11,7 @@ import (
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip11"
+	"github.com/nbd-wtf/go-nostr/nip45/hyperloglog"
 )
 
 func NewRelay() *Relay {
@@ -56,9 +57,9 @@ type Relay struct {
 	RejectFilter              []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	RejectCountFilter         []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	OverwriteFilter           []func(ctx context.Context, filter *nostr.Filter)
-	OverwriteCountFilter      []func(ctx context.Context, filter *nostr.Filter)
 	QueryEvents               []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
 	CountEvents               []func(ctx context.Context, filter nostr.Filter) (int64, error)
+	CountEventsHLL            []func(ctx context.Context, filter nostr.Filter, offset int) (int64, *hyperloglog.HyperLogLog, error)
 	RejectConnection          []func(r *http.Request) bool
 	OnConnect                 []func(ctx context.Context)
 	OnDisconnect              []func(ctx context.Context)

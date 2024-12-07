@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip45/hyperloglog"
 )
 
 func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGroup, ws *WebSocket, filter nostr.Filter) error {
@@ -61,12 +62,7 @@ func (rl *Relay) handleRequest(ctx context.Context, id string, eose *sync.WaitGr
 }
 
 func (rl *Relay) handleCountRequest(ctx context.Context, ws *WebSocket, filter nostr.Filter) int64 {
-	// overwrite the filter (for example, to eliminate some kinds or tags that we know we don't support)
-	for _, ovw := range rl.OverwriteCountFilter {
-		ovw(ctx, &filter)
-	}
-
-	// then check if we'll reject this filter
+	// check if we'll reject this filter
 	for _, reject := range rl.RejectCountFilter {
 		if rejecting, msg := reject(ctx, filter); rejecting {
 			ws.WriteJSON(nostr.NoticeEnvelope(msg))
@@ -85,4 +81,39 @@ func (rl *Relay) handleCountRequest(ctx context.Context, ws *WebSocket, filter n
 	}
 
 	return subtotal
+}
+
+func (rl *Relay) handleCountRequestWithHLL(
+	ctx context.Context,
+	ws *WebSocket,
+	filter nostr.Filter,
+	offset int,
+) (int64, *hyperloglog.HyperLogLog) {
+	// check if we'll reject this filter
+	for _, reject := range rl.RejectCountFilter {
+		if rejecting, msg := reject(ctx, filter); rejecting {
+			ws.WriteJSON(nostr.NoticeEnvelope(msg))
+			return 0, nil
+		}
+	}
+
+	// run the functions to count (generally it will be just one)
+	var subtotal int64 = 0
+	var hll *hyperloglog.HyperLogLog
+	for _, countHLL := range rl.CountEventsHLL {
+		res, fhll, err := countHLL(ctx, filter, offset)
+		if err != nil {
+			ws.WriteJSON(nostr.NoticeEnvelope(err.Error()))
+		}
+		subtotal += res
+		if fhll != nil {
+			if hll == nil {
+				hll = fhll
+			} else {
+				hll.Merge(fhll)
+			}
+		}
+	}
+
+	return subtotal, hll
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/fasthttp/websocket"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip42"
+	"github.com/nbd-wtf/go-nostr/nip45"
+	"github.com/nbd-wtf/go-nostr/nip45/hyperloglog"
 	"github.com/nbd-wtf/go-nostr/nip77"
 	"github.com/nbd-wtf/go-nostr/nip77/negentropy"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -228,20 +230,53 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					}
 					ws.WriteJSON(nostr.OKEnvelope{EventID: env.Event.ID, OK: ok, Reason: reason})
 				case *nostr.CountEnvelope:
-					if rl.CountEvents == nil {
+					if rl.CountEvents == nil && rl.CountEventsHLL == nil {
 						ws.WriteJSON(nostr.ClosedEnvelope{SubscriptionID: env.SubscriptionID, Reason: "unsupported: this relay does not support NIP-45"})
 						return
 					}
 
 					var total int64
+					var hll *hyperloglog.HyperLogLog
+					uneligibleForHLL := false
+
 					for _, filter := range env.Filters {
 						srl := rl
 						if rl.getSubRelayFromFilter != nil {
 							srl = rl.getSubRelayFromFilter(filter)
 						}
-						total += srl.handleCountRequest(ctx, ws, filter)
+
+						if offset := nip45.HyperLogLogEventPubkeyOffsetForFilter(filter); offset != -1 && !uneligibleForHLL {
+							partial, phll := srl.handleCountRequestWithHLL(ctx, ws, filter, offset)
+							if phll != nil {
+								if hll == nil {
+									// in the first iteration (which should be the only case of the times)
+									// we optimize slightly by assigning instead of merging
+									hll = phll
+								} else {
+									hll.Merge(phll)
+								}
+							} else {
+								// if any of the filters is uneligible then we will discard previous HLL results
+								// and refuse to do HLL at all anymore for this query
+								uneligibleForHLL = true
+								hll = nil
+							}
+							total += partial
+						} else {
+							total += srl.handleCountRequest(ctx, ws, filter)
+						}
 					}
-					ws.WriteJSON(nostr.CountEnvelope{SubscriptionID: env.SubscriptionID, Count: &total})
+
+					resp := nostr.CountEnvelope{
+						SubscriptionID: env.SubscriptionID,
+						Count:          &total,
+					}
+					if hll != nil {
+						resp.HyperLogLog = hll.GetRegisters()
+					}
+
+					ws.WriteJSON(resp)
+
 				case *nostr.ReqEnvelope:
 					eose := sync.WaitGroup{}
 					eose.Add(len(env.Filters))
