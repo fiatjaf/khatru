@@ -21,7 +21,7 @@ func NewRelay() *Relay {
 		Info: &nip11.RelayInformationDocument{
 			Software:      "https://github.com/fiatjaf/khatru",
 			Version:       "n/a",
-			SupportedNIPs: []int{1, 11, 42, 70, 86},
+			SupportedNIPs: []any{1, 11, 42, 70, 86},
 		},
 
 		upgrader: websocket.Upgrader{
