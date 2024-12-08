@@ -51,6 +51,7 @@ type Relay struct {
 	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
 	StoreEvent                []func(ctx context.Context, event *nostr.Event) error
+	ReplaceEvent              []func(ctx context.Context, event *nostr.Event) error
 	DeleteEvent               []func(ctx context.Context, event *nostr.Event) error
 	OnEventSaved              []func(ctx context.Context, event *nostr.Event)
 	OnEphemeralEvent          []func(ctx context.Context, event *nostr.Event)

@@ -35,68 +35,70 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 		}
 	} else {
 		// will store
-
-		// but first check if we already have it
-		filter := nostr.Filter{IDs: []string{evt.ID}}
-		for _, query := range rl.QueryEvents {
-			ch, err := query(ctx, filter)
-			if err != nil {
-				continue
-			}
-			for range ch {
-				// if we run this it means we already have this event, so we just return a success and exit
-				return true, nil
-			}
-		}
-
-		// if it's replaceable we first delete old versions
-		if evt.Kind == 0 || evt.Kind == 3 || (10000 <= evt.Kind && evt.Kind < 20000) {
-			// replaceable event, delete before storing
-			filter := nostr.Filter{Authors: []string{evt.PubKey}, Kinds: []int{evt.Kind}}
-			for _, query := range rl.QueryEvents {
-				ch, err := query(ctx, filter)
-				if err != nil {
-					continue
-				}
-				for previous := range ch {
-					if isOlder(previous, evt) {
-						for _, del := range rl.DeleteEvent {
-							del(ctx, previous)
-						}
+		// regular kinds are just saved directly
+		if nostr.IsRegularKind(evt.Kind) {
+			for _, store := range rl.StoreEvent {
+				if err := store(ctx, evt); err != nil {
+					switch err {
+					case eventstore.ErrDupEvent:
+						return true, nil
+					default:
+						return false, fmt.Errorf(nostr.NormalizeOKMessage(err.Error(), "error"))
 					}
 				}
 			}
-		} else if 30000 <= evt.Kind && evt.Kind < 40000 {
-			// parameterized replaceable event, delete before storing
-			d := evt.Tags.GetFirst([]string{"d", ""})
-			if d == nil {
-				return false, fmt.Errorf("invalid: missing 'd' tag on parameterized replaceable event")
-			}
-
-			filter := nostr.Filter{Authors: []string{evt.PubKey}, Kinds: []int{evt.Kind}, Tags: nostr.TagMap{"d": []string{(*d)[1]}}}
-			for _, query := range rl.QueryEvents {
-				ch, err := query(ctx, filter)
-				if err != nil {
-					continue
-				}
-				for previous := range ch {
-					if isOlder(previous, evt) {
-						for _, del := range rl.DeleteEvent {
-							del(ctx, previous)
+		} else {
+			// otherwise it's a replaceable -- so we'll use the replacer functions if we have any
+			if len(rl.ReplaceEvent) > 0 {
+				for _, repl := range rl.ReplaceEvent {
+					if err := repl(ctx, evt); err != nil {
+						switch err {
+						case eventstore.ErrDupEvent:
+							return true, nil
+						default:
+							return false, fmt.Errorf(nostr.NormalizeOKMessage(err.Error(), "error"))
 						}
 					}
 				}
-			}
-		}
+			} else {
+				// otherwise do it the manual way
+				filter := nostr.Filter{Limit: 1, Kinds: []int{evt.Kind}, Authors: []string{evt.PubKey}}
+				if nostr.IsAddressableKind(evt.Kind) {
+					// when addressable, add the "d" tag to the filter
+					filter.Tags = nostr.TagMap{"d": []string{evt.Tags.GetD()}}
+				}
 
-		// store
-		for _, store := range rl.StoreEvent {
-			if saveErr := store(ctx, evt); saveErr != nil {
-				switch saveErr {
-				case eventstore.ErrDupEvent:
-					return true, nil
-				default:
-					return false, fmt.Errorf(nostr.NormalizeOKMessage(saveErr.Error(), "error"))
+				// now we fetch old events and delete them
+				shouldStore := true
+				for _, query := range rl.QueryEvents {
+					ch, err := query(ctx, filter)
+					if err != nil {
+						continue
+					}
+					for previous := range ch {
+						if isOlder(previous, evt) {
+							for _, del := range rl.DeleteEvent {
+								del(ctx, previous)
+							}
+						} else {
+							// we found a more recent event, so we won't delete it and also will not store this new one
+							shouldStore = false
+						}
+					}
+				}
+
+				// store
+				if shouldStore {
+					for _, store := range rl.StoreEvent {
+						if saveErr := store(ctx, evt); saveErr != nil {
+							switch saveErr {
+							case eventstore.ErrDupEvent:
+								return true, nil
+							default:
+								return false, fmt.Errorf(nostr.NormalizeOKMessage(saveErr.Error(), "error"))
+							}
+						}
+					}
 				}
 			}
 		}
