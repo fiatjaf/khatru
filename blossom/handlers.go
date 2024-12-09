@@ -198,6 +198,8 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 			if err == nil && descriptor != nil {
 				t = descriptor.Uploaded.Time()
 			}
+			w.Header().Set("ETag", hhash)
+			w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
 			http.ServeContent(w, r, hhash+ext, t, reader)
 			return
 		}
