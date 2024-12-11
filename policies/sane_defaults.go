@@ -9,7 +9,7 @@ import (
 func ApplySaneDefaults(relay *khatru.Relay) {
 	relay.RejectEvent = append(relay.RejectEvent,
 		RejectEventsWithBase64Media,
-		EventIPRateLimiter(2, time.Minute*3, 5),
+		EventIPRateLimiter(2, time.Minute*3, 10),
 	)
 
 	relay.RejectFilter = append(relay.RejectFilter,
@@ -18,6 +18,6 @@ func ApplySaneDefaults(relay *khatru.Relay) {
 	)
 
 	relay.RejectConnection = append(relay.RejectConnection,
-		ConnectionRateLimiter(1, time.Minute*5, 10),
+		ConnectionRateLimiter(1, time.Minute*5, 100),
 	)
 }
