@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -24,10 +25,6 @@ import (
 
 // ServeHTTP implements http.Handler interface.
 func (rl *Relay) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if rl.ServiceURL == "" {
-		rl.ServiceURL = getServiceBaseURL(r)
-	}
-
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{
@@ -319,7 +316,10 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					id := string(*env)
 					rl.removeListenerId(ws, id)
 				case *nostr.AuthEnvelope:
-					wsBaseUrl := strings.Replace(rl.ServiceURL, "http", "ws", 1)
+					wsBaseUrl := os.Getenv("RELAY_URL")
+					if wsBaseUrl == "" {
+						wsBaseUrl = strings.Replace(getServiceBaseURL(r), "http", "ws", 1)
+					}
 					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
 						ws.AuthedPublicKey = pubkey
 						ws.authLock.Lock()
