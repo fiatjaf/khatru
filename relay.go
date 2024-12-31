@@ -45,8 +45,6 @@ func NewRelay() *Relay {
 }
 
 type Relay struct {
-	ServiceURL string
-
 	// hooks that will be called at various times
 	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
