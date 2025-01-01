@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -316,10 +315,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					id := string(*env)
 					rl.removeListenerId(ws, id)
 				case *nostr.AuthEnvelope:
-					wsBaseUrl := os.Getenv("RELAY_URL")
-					if wsBaseUrl == "" {
-						wsBaseUrl = strings.Replace(getServiceBaseURL(r), "http", "ws", 1)
-					}
+					wsBaseUrl := strings.Replace(rl.getBaseURL(r), "http", "ws", 1)
 					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
 						ws.AuthedPublicKey = pubkey
 						ws.authLock.Lock()

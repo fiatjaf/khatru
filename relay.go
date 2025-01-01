@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,6 +47,9 @@ func NewRelay() *Relay {
 }
 
 type Relay struct {
+	// setting this variable overwrites the hackish workaround we do to try to figure out our own base URL
+	ServiceURL string
+
 	// hooks that will be called at various times
 	RejectEvent               []func(ctx context.Context, event *nostr.Event) (reject bool, msg string)
 	OverwriteDeletionOutcome  []func(ctx context.Context, target *nostr.Event, deletion *nostr.Event) (acceptDeletion bool, msg string)
@@ -103,4 +108,30 @@ type Relay struct {
 	PongWait       time.Duration // Time allowed to read the next pong message from the peer.
 	PingPeriod     time.Duration // Send pings to peer with this period. Must be less than pongWait.
 	MaxMessageSize int64         // Maximum message size allowed from peer.
+}
+
+func (rl *Relay) getBaseURL(r *http.Request) string {
+	if rl.ServiceURL != "" {
+		return rl.ServiceURL
+	}
+
+	host := r.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = r.Host
+	}
+	proto := r.Header.Get("X-Forwarded-Proto")
+	if proto == "" {
+		if host == "localhost" {
+			proto = "http"
+		} else if strings.Index(host, ":") != -1 {
+			// has a port number
+			proto = "http"
+		} else if _, err := strconv.Atoi(strings.ReplaceAll(host, ".", "")); err == nil {
+			// it's a naked IP
+			proto = "http"
+		} else {
+			proto = "https"
+		}
+	}
+	return proto + "://" + host
 }
