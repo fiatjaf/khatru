@@ -20,6 +20,7 @@ func main() {
 	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 	relay.Negentropy = true
 
 	fmt.Println("running on :3334")

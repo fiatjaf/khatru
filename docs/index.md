@@ -52,6 +52,7 @@ func main() {
 	relay.StoreEvent = append(relay.StoreEvent, db.SaveEvent)
 	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 	http.ListenAndServe(":3334", relay)
 }
 ```

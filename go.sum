@@ -53,8 +53,8 @@ github.com/fasthttp/websocket v1.5.7 h1:0a6o2OfeATvtGgoMKleURhLT6JqWPg7fYfWnH4KH
 github.com/fasthttp/websocket v1.5.7/go.mod h1:bC4fxSono9czeXHQUVKxsC0sNjbm7lPJR04GDFqClfU=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
-github.com/fiatjaf/eventstore v0.14.2 h1:1XOLLEBCGQNQ1rLaO8mcfTQydcetPOqb/uRK8zOnOSI=
-github.com/fiatjaf/eventstore v0.14.2/go.mod h1:XmYZSdFxsY+cwfpdzVG61M7pemcmqlZwDfDGFC8WwWo=
+github.com/fiatjaf/eventstore v0.15.0 h1:5UXe0+vIb30/cYcOWipks8nR3g+X8W224TFy5yPzivk=
+github.com/fiatjaf/eventstore v0.15.0/go.mod h1:KAsld5BhkmSck48aF11Txu8X+OGNmoabw4TlYVWqInc=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=

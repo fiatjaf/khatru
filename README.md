@@ -127,6 +127,7 @@ Fear no more. Using the https://github.com/fiatjaf/eventstore module you get a b
 	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 ```
 
 ### But I don't want to write a bunch of custom policies!

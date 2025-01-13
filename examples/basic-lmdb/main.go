@@ -22,6 +22,7 @@ func main() {
 	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
 	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 
 	fmt.Println("running on :3334")
 	http.ListenAndServe(":3334", relay)

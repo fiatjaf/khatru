@@ -42,6 +42,7 @@ if err := db.Init(); err != nil {
 relay.StoreEvent = append(relay.StoreEvent, db.SaveEvent)
 relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
 relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
+relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 ```
 
 These are lists of functions that will be called in order every time an `EVENT` is received, or a `REQ` query is received. You can add more than one handler there, you can have a function that reads from some other server, but just in some cases, you can do anything.
