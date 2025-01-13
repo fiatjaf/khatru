@@ -106,6 +106,9 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 		for _, ons := range rl.OnEventSaved {
 			ons(ctx, evt)
 		}
+
+		// track event expiration if applicable
+		rl.expirationManager.trackEvent(evt)
 	}
 
 	return false, nil

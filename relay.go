@@ -17,13 +17,15 @@ import (
 )
 
 func NewRelay() *Relay {
+	ctx := context.Background()
+
 	rl := &Relay{
 		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
 
 		Info: &nip11.RelayInformationDocument{
 			Software:      "https://github.com/fiatjaf/khatru",
 			Version:       "n/a",
-			SupportedNIPs: []any{1, 11, 42, 70, 86},
+			SupportedNIPs: []any{1, 11, 40, 42, 70, 86},
 		},
 
 		upgrader: websocket.Upgrader{
@@ -42,6 +44,9 @@ func NewRelay() *Relay {
 		PingPeriod:     30 * time.Second,
 		MaxMessageSize: 512000,
 	}
+
+	rl.expirationManager = newExpirationManager(rl)
+	go rl.expirationManager.start(ctx)
 
 	return rl
 }
@@ -108,6 +113,9 @@ type Relay struct {
 	PongWait       time.Duration // Time allowed to read the next pong message from the peer.
 	PingPeriod     time.Duration // Send pings to peer with this period. Must be less than pongWait.
 	MaxMessageSize int64         // Maximum message size allowed from peer.
+
+	// NIP-40 expiration manager
+	expirationManager *ExpirationManager
 }
 
 func (rl *Relay) getBaseURL(r *http.Request) string {
