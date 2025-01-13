@@ -3,6 +3,7 @@ package khatru
 import (
 	"context"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -238,7 +239,89 @@ func TestBasicRelayFunctionality(t *testing.T) {
 		}
 	})
 
-	// test 5: unauthorized deletion
+	// test 5: event expiration
+	t.Run("event expiration", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// create a new relay with shorter expiration check interval
+		relay := NewRelay()
+		relay.expirationManager.interval = 3 * time.Second // check every 3 seconds
+		store := slicestore.SliceStore{}
+		store.Init()
+		relay.StoreEvent = append(relay.StoreEvent, store.SaveEvent)
+		relay.QueryEvents = append(relay.QueryEvents, store.QueryEvents)
+		relay.DeleteEvent = append(relay.DeleteEvent, store.DeleteEvent)
+
+		// start test server
+		server := httptest.NewServer(relay)
+		defer server.Close()
+
+		// connect test client
+		url := "ws" + server.URL[4:]
+		client, err := nostr.RelayConnect(context.Background(), url)
+		if err != nil {
+			t.Fatalf("failed to connect client: %v", err)
+		}
+		defer client.Close()
+
+		// create event that expires in 2 seconds
+		expiration := strconv.FormatInt(int64(nostr.Now()+2), 10)
+		evt := createEvent(sk1, 1, "i will expire soon", nostr.Tags{{"expiration", expiration}})
+		err = client.Publish(ctx, evt)
+		if err != nil {
+			t.Fatalf("failed to publish event: %v", err)
+		}
+
+		// verify event exists initially
+		sub, err := client.Subscribe(ctx, []nostr.Filter{{
+			IDs: []string{evt.ID},
+		}})
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+
+		// should get the event
+		select {
+		case env := <-sub.Events:
+			if env.ID != evt.ID {
+				t.Error("got wrong event")
+			}
+		case <-ctx.Done():
+			t.Fatal("timeout waiting for event")
+		}
+		sub.Unsub()
+
+		// wait for expiration check (>3 seconds)
+		time.Sleep(4 * time.Second)
+
+		// verify event no longer exists
+		sub, err = client.Subscribe(ctx, []nostr.Filter{{
+			IDs: []string{evt.ID},
+		}})
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+		defer sub.Unsub()
+
+		// should get EOSE without receiving the expired event
+		gotEvent := false
+		for {
+			select {
+			case <-sub.Events:
+				gotEvent = true
+			case <-sub.EndOfStoredEvents:
+				if gotEvent {
+					t.Error("should not have received expired event")
+				}
+				return
+			case <-ctx.Done():
+				t.Fatal("timeout waiting for EOSE")
+			}
+		}
+	})
+
+	// test 6: unauthorized deletion
 	t.Run("unauthorized deletion", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

@@ -33,22 +33,24 @@ func (h *expiringEventHeap) Pop() interface{} {
 	return x
 }
 
-type ExpirationManager struct {
+type expirationManager struct {
 	events          expiringEventHeap
 	mu              sync.Mutex
 	relay           *Relay
+	interval        time.Duration
 	initialScanDone bool
 }
 
-func newExpirationManager(relay *Relay) *ExpirationManager {
-	return &ExpirationManager{
-		events: make(expiringEventHeap, 0),
-		relay:  relay,
+func newExpirationManager(relay *Relay) *expirationManager {
+	return &expirationManager{
+		events:   make(expiringEventHeap, 0),
+		relay:    relay,
+		interval: time.Hour,
 	}
 }
 
-func (em *ExpirationManager) start(ctx context.Context) {
-	ticker := time.NewTicker(time.Hour)
+func (em *expirationManager) start(ctx context.Context) {
+	ticker := time.NewTicker(em.interval)
 	defer ticker.Stop()
 
 	for {
@@ -66,7 +68,7 @@ func (em *ExpirationManager) start(ctx context.Context) {
 	}
 }
 
-func (em *ExpirationManager) initialScan(ctx context.Context) {
+func (em *expirationManager) initialScan(ctx context.Context) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
@@ -90,7 +92,7 @@ func (em *ExpirationManager) initialScan(ctx context.Context) {
 	heap.Init(&em.events)
 }
 
-func (em *ExpirationManager) checkExpiredEvents(ctx context.Context) {
+func (em *expirationManager) checkExpiredEvents(ctx context.Context) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
@@ -121,7 +123,7 @@ func (em *ExpirationManager) checkExpiredEvents(ctx context.Context) {
 	}
 }
 
-func (em *ExpirationManager) trackEvent(evt *nostr.Event) {
+func (em *expirationManager) trackEvent(evt *nostr.Event) {
 	if expiresAt := nip40.GetExpiration(evt.Tags); expiresAt != -1 {
 		em.mu.Lock()
 		heap.Push(&em.events, expiringEvent{

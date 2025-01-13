@@ -115,7 +115,7 @@ type Relay struct {
 	MaxMessageSize int64         // Maximum message size allowed from peer.
 
 	// NIP-40 expiration manager
-	expirationManager *ExpirationManager
+	expirationManager *expirationManager
 }
 
 func (rl *Relay) getBaseURL(r *http.Request) string {
