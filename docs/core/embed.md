@@ -69,4 +69,4 @@ Every [`khatru.Relay`](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay) insta
 
 That's also possible, as long as you have a way of differentiating each HTTP request that comes at the middleware level and associating it with a `khatru.Relay` instance in the background.
 
-See [dynamic](dynamic) for an example that does that using the subdomain. [`countries`](https://git.fiatjaf.com/countries) does it using the requester country implied from its IP address.
+See [dynamic](../cookbook/dynamic) for an example that does that using the subdomain. [`countries`](https://git.fiatjaf.com/countries) does it using the requester country implied from its IP address.

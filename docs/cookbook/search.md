@@ -6,7 +6,7 @@ outline: deep
 
 The [`nostr.Filter` type](https://pkg.go.dev/github.com/nbd-wtf/go-nostr#Filter) has a `Search` field, so you basically just has to handle that if it's present.
 
-It can be tricky to implement fulltext search properly though, so some [eventstores](eventstore) implement it natively, such as [Bluge](https://pkg.go.dev/github.com/fiatjaf/eventstore/bluge), [OpenSearch](https://pkg.go.dev/github.com/fiatjaf/eventstore/opensearch) and [ElasticSearch](https://pkg.go.dev/github.com/fiatjaf/eventstore/elasticsearch) (although for the last two you'll need an instance of these database servers running, while with Bluge it's embedded).
+It can be tricky to implement fulltext search properly though, so some [eventstores](../core/eventstore) implement it natively, such as [Bluge](https://pkg.go.dev/github.com/fiatjaf/eventstore/bluge), [OpenSearch](https://pkg.go.dev/github.com/fiatjaf/eventstore/opensearch) and [ElasticSearch](https://pkg.go.dev/github.com/fiatjaf/eventstore/elasticsearch) (although for the last two you'll need an instance of these database servers running, while with Bluge it's embedded).
 
 If you have any of these you can just use them just like any other eventstore:
 

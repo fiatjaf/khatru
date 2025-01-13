@@ -67,7 +67,7 @@ import "github.com/fiatjaf/khatru" // implied
 relay.RejectEvent = append(relay.RejectEvent, policies.PreventLargeTags(120), policies.PreventTimestampsInThePast(time.Hour * 2), policies.PreventTimestampsInTheFuture(time.Minute * 30))
 ```
 
-There are many other ways to customize the relay behavior. Take a look at the [`Relay` struct docs](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay) for more, or see the [cookbook](/cookbook/).
+There are many other ways to customize the relay behavior. Take a look at the [`Relay` struct docs](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay) for more, or read the pages on the sidebar.
 
 The last step is actually running the server. Our relay is actually an `http.Handler`, so it can just be ran directly with `http.ListenAndServe()` from the standard library:
 
