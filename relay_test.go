@@ -176,7 +176,69 @@ func TestBasicRelayFunctionality(t *testing.T) {
 		}
 	})
 
-	// Test 4: Unauthorized deletion
+	// test 4: teplaceable events
+	t.Run("replaceable events", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// create initial kind:0 event
+		evt1 := createEvent(sk1, 0, `{"name":"initial"}`, nil)
+		evt1.CreatedAt = 1000 // Set specific timestamp for testing
+		evt1.Sign(sk1)
+		err = client1.Publish(ctx, evt1)
+		if err != nil {
+			t.Fatalf("failed to publish initial event: %v", err)
+		}
+
+		// create newer event that should replace the first
+		evt2 := createEvent(sk1, 0, `{"name":"newer"}`, nil)
+		evt2.CreatedAt = 2000 // Newer timestamp
+		evt2.Sign(sk1)
+		err = client1.Publish(ctx, evt2)
+		if err != nil {
+			t.Fatalf("failed to publish newer event: %v", err)
+		}
+
+		// create older event that should not replace the current one
+		evt3 := createEvent(sk1, 0, `{"name":"older"}`, nil)
+		evt3.CreatedAt = 1500 // Older than evt2
+		evt3.Sign(sk1)
+		err = client1.Publish(ctx, evt3)
+		if err != nil {
+			t.Fatalf("failed to publish older event: %v", err)
+		}
+
+		// query to verify only the newest event exists
+		sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+			Authors: []string{pk1},
+			Kinds:   []int{0},
+		}})
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+		defer sub.Unsub()
+
+		// should only get one event back (the newest one)
+		var receivedEvents []*nostr.Event
+		for {
+			select {
+			case env := <-sub.Events:
+				receivedEvents = append(receivedEvents, env)
+			case <-sub.EndOfStoredEvents:
+				if len(receivedEvents) != 1 {
+					t.Errorf("expected exactly 1 event, got %d", len(receivedEvents))
+				}
+				if len(receivedEvents) > 0 && receivedEvents[0].Content != `{"name":"newer"}` {
+					t.Errorf("expected newest event content, got %s", receivedEvents[0].Content)
+				}
+				return
+			case <-ctx.Done():
+				t.Fatal("timeout waiting for events")
+			}
+		}
+	})
+
+	// test 5: unauthorized deletion
 	t.Run("unauthorized deletion", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
