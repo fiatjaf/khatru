@@ -96,7 +96,3 @@ For example, maybe you want kind 1 events in `db1` and kind 30023 events in `db3
 		}
 	})
 ```
-
-## Search
-
-See [search](search).

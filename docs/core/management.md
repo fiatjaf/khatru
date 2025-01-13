@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# Setting up the Relay Management API
+# Management API
 
 [NIP-86](https://nips.nostr.com/86) specifies a set of RPC methods for managing the boring aspects of relays, such as whitelisting or banning users, banning individual events, banning IPs and so on.
 

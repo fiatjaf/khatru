@@ -9,9 +9,6 @@ hero:
     - theme: brand
       text: Get Started
       link: /getting-started
-    - theme: alt
-      text: Cookbook
-      link: /cookbook/
 
 features:
   - title: It's a library
@@ -20,19 +17,19 @@ features:
     details: This is not an executable that you have to tweak with config files, it's a library that you import and use, so you just write code and it does exactly what you want.
   - title: It's very very customizable
     icon: 🎶
-    link: /cookbook/embed
+    link: /core/embed
     details: Run arbitrary functions to reject events, reject filters, overwrite results of queries, perform actual queries, mix the relay stuff with other HTTP handlers or even run it inside an existing website.
   - title: It plugs into event stores easily
     icon: 📦
-    link: /cookbook/eventstore
+    link: /core/eventstore
     details: khatru's companion, the `eventstore` library, provides all methods for storing and querying events efficiently from SQLite, LMDB, Postgres, Badger and others.
   - title: It supports NIP-42 AUTH
     icon: 🪪
-    link: /cookbook/auth
+    link: /core/auth
     details: You can check if a client is authenticated or request AUTH anytime, or reject an event or a filter with an "auth-required:" and it will be handled automatically.
   - title: It supports NIP-86 Management API
     icon: 🛠️
-    link: /cookbook/management
+    link: /core/management
     details: You just define your custom handlers for each RPC call and they will be exposed appropriately to management clients.
   - title: It's written in Go
     icon: 🛵
