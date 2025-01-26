@@ -22,7 +22,7 @@ func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if auth == nil {
-		blossomError(w, "missing \"Authorization\" header", 400)
+		blossomError(w, "missing \"Authorization\" header", 401)
 		return
 	}
 	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
@@ -56,7 +56,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if auth == nil {
-		blossomError(w, "missing \"Authorization\" header", 400)
+		blossomError(w, "missing \"Authorization\" header", 401)
 		return
 	}
 	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
