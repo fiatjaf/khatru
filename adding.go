@@ -43,7 +43,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 					case eventstore.ErrDupEvent:
 						return true, nil
 					default:
-						return false, fmt.Errorf(nostr.NormalizeOKMessage(err.Error(), "error"))
+						return false, fmt.Errorf("%s", nostr.NormalizeOKMessage(err.Error(), "error"))
 					}
 				}
 			}
@@ -56,7 +56,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 						case eventstore.ErrDupEvent:
 							return true, nil
 						default:
-							return false, fmt.Errorf(nostr.NormalizeOKMessage(err.Error(), "error"))
+							return false, fmt.Errorf("%s", nostr.NormalizeOKMessage(err.Error(), "error"))
 						}
 					}
 				}
@@ -95,7 +95,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 							case eventstore.ErrDupEvent:
 								return true, nil
 							default:
-								return false, fmt.Errorf(nostr.NormalizeOKMessage(saveErr.Error(), "error"))
+								return false, fmt.Errorf("%s", nostr.NormalizeOKMessage(saveErr.Error(), "error"))
 							}
 						}
 					}

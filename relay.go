@@ -131,7 +131,7 @@ func (rl *Relay) getBaseURL(r *http.Request) string {
 	if proto == "" {
 		if host == "localhost" {
 			proto = "http"
-		} else if strings.Index(host, ":") != -1 {
+		} else if strings.Contains(host, ":") {
 			// has a port number
 			proto = "http"
 		} else if _, err := strconv.Atoi(strings.ReplaceAll(host, ".", "")); err == nil {
