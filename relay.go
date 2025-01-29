@@ -48,6 +48,9 @@ func NewRelay() *Relay {
 	rl.expirationManager = newExpirationManager(rl)
 	go rl.expirationManager.start(ctx)
 
+	rl.retentionManager = newRetentionManager(rl)
+	go rl.retentionManager.start(ctx)
+
 	return rl
 }
 
@@ -116,6 +119,9 @@ type Relay struct {
 
 	// NIP-40 expiration manager
 	expirationManager *expirationManager
+
+	// retention manager based on nip-11
+	retentionManager *retentionManager
 }
 
 func (rl *Relay) getBaseURL(r *http.Request) string {
