@@ -14,9 +14,10 @@ type BlossomServer struct {
 	ServiceURL string
 	Store      BlobIndex
 
-	StoreBlob  []func(ctx context.Context, sha256 string, body []byte) error
-	LoadBlob   []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
-	DeleteBlob []func(ctx context.Context, sha256 string) error
+	StoreBlob     []func(ctx context.Context, sha256 string, body []byte) error
+	LoadBlob      []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
+	DeleteBlob    []func(ctx context.Context, sha256 string) error
+	ReceiveReport []func(ctx context.Context, reportEvt *nostr.Event) error
 
 	RejectUpload []func(ctx context.Context, auth *nostr.Event, size int, ext string) (bool, string, int)
 	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
@@ -57,6 +58,13 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 				return
 			} else if r.Method == "DELETE" {
 				bs.handleDelete(w, r)
+				return
+			}
+		}
+
+		if r.URL.Path == "/report" {
+			if r.Method == "PUT" {
+				bs.handleReport(w, r)
 				return
 			}
 		}
