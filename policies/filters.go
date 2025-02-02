@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	"github.com/fiatjaf/khatru"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -15,6 +16,14 @@ func NoComplexFilters(ctx context.Context, filter nostr.Filter) (reject bool, ms
 		return true, "too many things to filter for"
 	}
 
+	return false, ""
+}
+
+// MustAuth requires all subscribers to be authenticated
+func MustAuth(ctx context.Context, filter nostr.Filter) (reject bool, msg string) {
+	if khatru.GetAuthed(ctx) == "" {
+		return true, "auth-required: all requests must be authenticated"
+	}
 	return false, ""
 }
 
