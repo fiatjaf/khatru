@@ -46,6 +46,7 @@ func main() {
 			return nil
 		},
 	)
+
 	relay.QueryEvents = append(relay.QueryEvents,
 		func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error) {
 			ch := make(chan *nostr.Event)
@@ -60,6 +61,7 @@ func main() {
 			return ch, nil
 		},
 	)
+
 	relay.DeleteEvent = append(relay.DeleteEvent,
 		func(ctx context.Context, event *nostr.Event) error {
 			delete(store, event.ID)
@@ -118,16 +120,17 @@ func main() {
 Fear no more. Using the https://github.com/fiatjaf/eventstore module you get a bunch of compatible databases out of the box and you can just plug them into your relay. For example, [sqlite](https://pkg.go.dev/github.com/fiatjaf/eventstore/sqlite3):
 
 ```go
-	db := sqlite3.SQLite3Backend{DatabaseURL: "/tmp/khatru-sqlite-tmp"}
-	if err := db.Init(); err != nil {
-		panic(err)
-	}
+package main
 
-	relay.StoreEvent = append(relay.StoreEvent, db.SaveEvent)
-	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
-	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
-	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
-	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
+func main() {
+	db := &sqlite3.SQLite3Backend{DatabaseURL: "/tmp/khatru-sqlite-tmp"}
+	_ = db.Init()
+
+	relay := khatru.NewRelay(db)
+	relay.WithCountEvents(db.CountEvents)
+
+	_ = http.ListenAndServe(":3334", relay)
+}
 ```
 
 ### But I don't want to write a bunch of custom policies!
@@ -135,7 +138,7 @@ Fear no more. Using the https://github.com/fiatjaf/eventstore module you get a b
 Fear no more. We have a bunch of common policies written in the `github.com/fiatjaf/khatru/policies` package and also a handpicked selection of base sane defaults, which you can apply with:
 
 ```go
-	policies.ApplySaneDefaults(relay)
+policies.ApplySaneDefaults(relay)
 ```
 
 Contributions to this are very much welcomed.

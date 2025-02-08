@@ -1,3 +1,4 @@
 *.env
 .idea/
 knowledge.md
+.vscode
