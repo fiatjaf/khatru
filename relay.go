@@ -75,7 +75,7 @@ type Relay struct {
 	RejectCountFilter         []func(ctx context.Context, filter nostr.Filter) (reject bool, msg string)
 	OverwriteFilter           []func(ctx context.Context, filter *nostr.Filter)
 	QueryEvents               []func(ctx context.Context, filter nostr.Filter) (chan *nostr.Event, error)
-	CountEvents               []func(ctx context.Context, filter nostr.Filter) (int64, error)
+	CountEvents               []CountEventsFunc
 	CountEventsHLL            []func(ctx context.Context, filter nostr.Filter, offset int) (int64, *hyperloglog.HyperLogLog, error)
 	RejectConnection          []func(r *http.Request) bool
 	OnConnect                 []func(ctx context.Context)
@@ -151,3 +151,12 @@ func (rl *Relay) getBaseURL(r *http.Request) string {
 	}
 	return proto + "://" + host
 }
+
+// WithNegentropy option to run relay with negentropy
+func (rl *Relay) WithNegentropy() { rl.Negentropy = true }
+
+// CountEventsFunc defines the type of function that the CountEvents field receives
+type CountEventsFunc func(ctx context.Context, filter nostr.Filter) (int64, error)
+
+// WithCountEvents option to run a function for CountEvents
+func (rl *Relay) WithCountEvents(fn CountEventsFunc) { rl.CountEvents = append(rl.CountEvents, fn) }
