@@ -17,6 +17,7 @@ func main() {
 	if err := db.Init(); err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
 	relay := khatru.NewRelay(db)
 	relay.WithCountEvents(db.CountEvents)
@@ -34,5 +35,5 @@ func main() {
 	})
 
 	fmt.Println("running on :3334")
-	http.ListenAndServe(":3334", relay)
+	_ = http.ListenAndServe(":3334", relay)
 }

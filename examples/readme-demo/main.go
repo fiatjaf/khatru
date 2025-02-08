@@ -94,5 +94,5 @@ func main() {
 
 	// start the server
 	fmt.Println("running on :3334")
-	http.ListenAndServe(":3334", relay)
+	_ = http.ListenAndServe(":3334", relay)
 }

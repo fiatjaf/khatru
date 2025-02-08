@@ -14,12 +14,13 @@ import (
 
 func main() {
 	db := &lmdb.LMDBBackend{Path: "/tmp/exclusive"}
-	os.MkdirAll(db.Path, 0755)
+	_ = os.MkdirAll(db.Path, 0755)
 	if err := db.Init(); err != nil {
 		panic(err)
 	}
+	defer db.Close()
 
-	relay := khatru.NewRelay()
+	relay := khatru.NewRelay(db)
 	relay.WithCountEvents(db.CountEvents)
 
 	relay.RejectEvent = append(relay.RejectEvent, policies.PreventTooManyIndexableTags(10, nil, nil))
@@ -27,5 +28,5 @@ func main() {
 	relay.OnEventSaved = append(relay.OnEventSaved, func(ctx context.Context, event *nostr.Event) {})
 
 	fmt.Println("running on :3334")
-	http.ListenAndServe(":3334", relay)
+	_ = http.ListenAndServe(":3334", relay)
 }
