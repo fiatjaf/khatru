@@ -13,18 +13,13 @@ import (
 )
 
 func main() {
-	relay := khatru.NewRelay()
-
 	db := &badger.BadgerBackend{Path: "/tmp/khatru-badger-blossom-tmp"}
 	if err := db.Init(); err != nil {
 		panic(err)
 	}
 
-	relay.StoreEvent = append(relay.StoreEvent, db.SaveEvent)
-	relay.QueryEvents = append(relay.QueryEvents, db.QueryEvents)
-	relay.CountEvents = append(relay.CountEvents, db.CountEvents)
-	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
-	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
+	relay := khatru.NewRelay(db)
+	relay.WithCountEvents(db.CountEvents)
 
 	bl := blossom.New(relay, "http://localhost:3334")
 	bl.Store = blossom.EventStoreBlobIndexWrapper{Store: db, ServiceURL: bl.ServiceURL}
