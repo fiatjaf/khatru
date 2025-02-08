@@ -11,14 +11,15 @@ import (
 	"time"
 
 	"github.com/fasthttp/websocket"
+	"github.com/fiatjaf/eventstore"
+
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip11"
 	"github.com/nbd-wtf/go-nostr/nip45/hyperloglog"
 )
 
-func NewRelay() *Relay {
-	ctx := context.Background()
-
+// NewRelay initializes a new relay for the Nostr protocol
+func NewRelay(databases ...eventstore.Store) *Relay {
 	rl := &Relay{
 		Log: log.New(os.Stderr, "[khatru-relay] ", log.LstdFlags),
 
@@ -45,8 +46,15 @@ func NewRelay() *Relay {
 		MaxMessageSize: 512000,
 	}
 
+	for _, db := range databases {
+		rl.StoreEvent = append(rl.StoreEvent, db.SaveEvent)
+		rl.QueryEvents = append(rl.QueryEvents, db.QueryEvents)
+		rl.DeleteEvent = append(rl.DeleteEvent, db.DeleteEvent)
+		rl.ReplaceEvent = append(rl.ReplaceEvent, db.ReplaceEvent)
+	}
+
 	rl.expirationManager = newExpirationManager(rl)
-	go rl.expirationManager.start(ctx)
+	go rl.expirationManager.start(context.Background())
 
 	return rl
 }
