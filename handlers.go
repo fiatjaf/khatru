@@ -305,10 +305,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					}
 
 					go func() {
-						// when all events have been loaded from databases and dispatched
-						// we can cancel the context and fire the EOSE message
+						// when all events have been loaded from databases and dispatched we can fire the EOSE message
 						eose.Wait()
-						cancelReqCtx(nil)
 						ws.WriteJSON(nostr.EOSEEnvelope(env.SubscriptionID))
 					}()
 				case *nostr.CloseEnvelope:
