@@ -37,6 +37,7 @@ type RelayManagementAPI struct {
 	BlockIP                     func(ctx context.Context, ip net.IP, reason string) error
 	UnblockIP                   func(ctx context.Context, ip net.IP, reason string) error
 	ListBlockedIPs              func(ctx context.Context) ([]nip86.IPReason, error)
+	Generic                     func(ctx context.Context, request nip86.Request) (nip86.Response, error)
 }
 
 func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +268,13 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 				resp.Result = result
 			}
 		default:
-			resp.Error = fmt.Sprintf("method '%s' not known", mp.MethodName())
+			if rl.ManagementAPI.Generic == nil {
+				resp.Error = fmt.Sprintf("method '%s' not known", mp.MethodName())
+			} else if result, err := rl.ManagementAPI.Generic(ctx, req); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = result
+			}
 		}
 	}
 
