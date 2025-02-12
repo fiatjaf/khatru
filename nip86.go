@@ -28,15 +28,20 @@ type RelayManagementAPI struct {
 	AllowEvent                  func(ctx context.Context, id string, reason string) error
 	BanEvent                    func(ctx context.Context, id string, reason string) error
 	ListBannedEvents            func(ctx context.Context) ([]nip86.IDReason, error)
+	ListAllowedEvents           func(ctx context.Context) ([]nip86.IDReason, error)
 	ChangeRelayName             func(ctx context.Context, name string) error
 	ChangeRelayDescription      func(ctx context.Context, desc string) error
 	ChangeRelayIcon             func(ctx context.Context, icon string) error
 	AllowKind                   func(ctx context.Context, kind int) error
 	DisallowKind                func(ctx context.Context, kind int) error
 	ListAllowedKinds            func(ctx context.Context) ([]int, error)
+	ListDisAllowedKinds         func(ctx context.Context) ([]int, error)
 	BlockIP                     func(ctx context.Context, ip net.IP, reason string) error
 	UnblockIP                   func(ctx context.Context, ip net.IP, reason string) error
 	ListBlockedIPs              func(ctx context.Context) ([]nip86.IPReason, error)
+	Stats                       func(ctx context.Context) (nip86.Response, error)
+	GrantAdmin                  func(ctx context.Context, pubkey string, methods []string) error
+	RevokeAdmin                 func(ctx context.Context, pubkey string, methods []string) error
 	Generic                     func(ctx context.Context, request nip86.Request) (nip86.Response, error)
 }
 
@@ -263,6 +268,46 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 			if rl.ManagementAPI.ListBlockedIPs == nil {
 				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
 			} else if result, err := rl.ManagementAPI.ListBlockedIPs(ctx); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = result
+			}
+		case nip86.Stats:
+			if rl.ManagementAPI.Stats == nil {
+				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
+			} else if result, err := rl.ManagementAPI.Stats(ctx); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = result
+			}
+		case nip86.GrantAdmin:
+			if rl.ManagementAPI.GrantAdmin == nil {
+				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
+			} else if err := rl.ManagementAPI.GrantAdmin(ctx, thing.Pubkey, thing.AllowMethods); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = true
+			}
+		case nip86.RevokeAdmin:
+			if rl.ManagementAPI.RevokeAdmin == nil {
+				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
+			} else if err := rl.ManagementAPI.RevokeAdmin(ctx, thing.Pubkey, thing.DisallowMethods); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = true
+			}
+		case nip86.ListDisallowedKinds:
+			if rl.ManagementAPI.ListDisAllowedKinds == nil {
+				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
+			} else if result, err := rl.ManagementAPI.ListDisAllowedKinds(ctx); err != nil {
+				resp.Error = err.Error()
+			} else {
+				resp.Result = result
+			}
+		case nip86.ListAllowedEvents:
+			if rl.ManagementAPI.ListAllowedEvents == nil {
+				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
+			} else if result, err := rl.ManagementAPI.ListAllowedEvents(ctx); err != nil {
 				resp.Error = err.Error()
 			} else {
 				resp.Result = result
