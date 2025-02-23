@@ -126,7 +126,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					websocket.CloseAbnormalClosure,  // 1006
 					4537,                            // some client seems to send many of these
 				) {
-					rl.Log.Printf("unexpected close error from %s: %v\n", r.Header.Get("X-Forwarded-For"), err)
+					rl.Log.Printf("unexpected close error from %s: %v\n", GetIPFromRequest(r), err)
 				}
 				ws.cancel()
 				return
