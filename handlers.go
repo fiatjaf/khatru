@@ -235,32 +235,15 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					var hll *hyperloglog.HyperLogLog
 					uneligibleForHLL := false
 
-					for _, filter := range env.Filters {
-						srl := rl
-						if rl.getSubRelayFromFilter != nil {
-							srl = rl.getSubRelayFromFilter(filter)
-						}
+					srl := rl
+					if rl.getSubRelayFromFilter != nil {
+						srl = rl.getSubRelayFromFilter(env.Filter)
+					}
 
-						if offset := nip45.HyperLogLogEventPubkeyOffsetForFilter(filter); offset != -1 && !uneligibleForHLL {
-							partial, phll := srl.handleCountRequestWithHLL(ctx, ws, filter, offset)
-							if phll != nil {
-								if hll == nil {
-									// in the first iteration (which should be the only case of the times)
-									// we optimize slightly by assigning instead of merging
-									hll = phll
-								} else {
-									hll.Merge(phll)
-								}
-							} else {
-								// if any of the filters is uneligible then we will discard previous HLL results
-								// and refuse to do HLL at all anymore for this query
-								uneligibleForHLL = true
-								hll = nil
-							}
-							total += partial
-						} else {
-							total += srl.handleCountRequest(ctx, ws, filter)
-						}
+					if offset := nip45.HyperLogLogEventPubkeyOffsetForFilter(env.Filter); offset != -1 && !uneligibleForHLL {
+						total, hll = srl.handleCountRequestWithHLL(ctx, ws, env.Filter, offset)
+					} else {
+						total = srl.handleCountRequest(ctx, ws, env.Filter)
 					}
 
 					resp := nostr.CountEnvelope{
