@@ -115,6 +115,8 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			onconnect(ctx)
 		}
 
+		smp := nostr.NewSonicMessageParser()
+
 		for {
 			typ, message, err := ws.conn.ReadMessage()
 			if err != nil {
@@ -137,15 +139,17 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
+			// parse messages sequentially otherwise the world breaks
+			envelope, err := smp.ParseMessage(message)
+
+			// then delegate to the goroutine
 			go func(message []byte) {
-				envelope := nostr.ParseMessage(message)
-				if envelope == nil {
-					if !rl.Negentropy {
-						// stop silently
-						return
+				if err != nil {
+					if err == nostr.UnknownLabel && rl.Negentropy {
+						envelope = nip77.ParseNegMessage(message)
 					}
-					envelope = nip77.ParseNegMessage(message)
 					if envelope == nil {
+						ws.WriteJSON(nostr.NoticeEnvelope("failed to parse envelope: " + err.Error()))
 						return
 					}
 				}

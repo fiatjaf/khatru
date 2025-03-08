@@ -3,7 +3,6 @@ package khatru
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cloudwego/base64x"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip86"
 )
@@ -72,7 +72,7 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 			goto respond
 		}
 
-		evtj, err := base64.StdEncoding.DecodeString(spl[1])
+		evtj, err := base64x.StdEncoding.DecodeString(spl[1])
 		if err != nil {
 			resp.Error = "invalid base64 auth"
 			goto respond

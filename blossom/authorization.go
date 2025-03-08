@@ -2,7 +2,6 @@ package blossom
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cloudwego/base64x"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -21,7 +21,7 @@ func readAuthorization(r *http.Request) (*nostr.Event, error) {
 
 	var reader io.Reader
 	reader = bytes.NewReader([]byte(token)[6:])
-	reader = base64.NewDecoder(base64.StdEncoding, reader)
+	reader = base64x.NewDecoder(base64x.StdEncoding, reader)
 	var evt nostr.Event
 	err := json.NewDecoder(reader).Decode(&evt)
 
