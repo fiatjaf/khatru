@@ -115,7 +115,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 			onconnect(ctx)
 		}
 
-		smp := nostr.NewSonicMessageParser()
+		smp := nostr.NewMessageParser()
 
 		for {
 			typ, message, err := ws.conn.ReadMessage()
