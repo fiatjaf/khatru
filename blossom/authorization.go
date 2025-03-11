@@ -1,15 +1,13 @@
 package blossom
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/cloudwego/base64x"
+	"github.com/mailru/easyjson"
 	"github.com/nbd-wtf/go-nostr"
 )
 
@@ -19,25 +17,26 @@ func readAuthorization(r *http.Request) (*nostr.Event, error) {
 		return nil, nil
 	}
 
-	var reader io.Reader
-	reader = bytes.NewReader([]byte(token)[6:])
-	reader = base64x.NewDecoder(base64x.StdEncoding, reader)
+	eventj, err := base64x.StdEncoding.DecodeString(token[6:])
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 token")
+	}
 	var evt nostr.Event
-	err := json.NewDecoder(reader).Decode(&evt)
-
-	if err != nil || evt.Kind != 24242 || len(evt.ID) != 64 || !evt.CheckID() {
+	if err := easyjson.Unmarshal(eventj, &evt); err != nil {
+		return nil, fmt.Errorf("broken event")
+	}
+	if evt.Kind != 24242 || len(evt.ID) != 64 || !evt.CheckID() {
 		return nil, fmt.Errorf("invalid event")
 	}
-
 	if ok, _ := evt.CheckSignature(); !ok {
 		return nil, fmt.Errorf("invalid signature")
 	}
 
-	expirationTag := evt.Tags.GetFirst([]string{"expiration", ""})
+	expirationTag := evt.Tags.Find("expiration")
 	if expirationTag == nil {
 		return nil, fmt.Errorf("missing \"expiration\" tag")
 	}
-	expiration, _ := strconv.ParseInt((*expirationTag)[1], 10, 64)
+	expiration, _ := strconv.ParseInt(expirationTag[1], 10, 64)
 	if nostr.Timestamp(expiration) < nostr.Now() {
 		return nil, fmt.Errorf("event expired")
 	}
