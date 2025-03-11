@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip70"
 )
 
 // PreventTooManyIndexableTags returns a function that can be used as a RejectFilter that will reject
@@ -106,4 +107,11 @@ func PreventTimestampsInTheFuture(threshold time.Duration) func(context.Context,
 
 func RejectEventsWithBase64Media(ctx context.Context, evt *nostr.Event) (bool, string) {
 	return strings.Contains(evt.Content, "data:image/") || strings.Contains(evt.Content, "data:video/"), "event with base64 media"
+}
+
+func OnlyAllowNIP70ProtectedEvents(ctx context.Context, event *nostr.Event) (reject bool, msg string) {
+	if nip70.IsProtected(event) {
+		return false, ""
+	}
+	return true, "blocked: we only accept events protected with the nip70 \"-\" tag"
 }
