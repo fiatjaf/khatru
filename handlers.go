@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/bep/debounce"
 	"github.com/fasthttp/websocket"
@@ -118,7 +119,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		smp := nostr.NewMessageParser()
 
 		for {
-			typ, message, err := ws.conn.ReadMessage()
+			typ, msgb, err := ws.conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(
 					err,
@@ -139,11 +140,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			// parse messages sequentially otherwise the world breaks
+			message := unsafe.String(unsafe.SliceData(msgb), len(msgb))
+
+			// parse messages sequentially otherwise sonic breaks
 			envelope, err := smp.ParseMessage(message)
 
 			// then delegate to the goroutine
-			go func(message []byte) {
+			go func(message string) {
 				if err != nil {
 					if err == nostr.UnknownLabel && rl.Negentropy {
 						envelope = nip77.ParseNegMessage(message)
