@@ -1,6 +1,6 @@
 module github.com/fiatjaf/khatru
 
-go 1.23.1
+go 1.24.1
 
 require (
 	github.com/bep/debounce v1.2.1
@@ -9,7 +9,7 @@ require (
 	github.com/fiatjaf/eventstore v0.16.2
 	github.com/liamg/magic v0.0.1
 	github.com/mailru/easyjson v0.9.0
-	github.com/nbd-wtf/go-nostr v0.51.3-0.20250312034958-cc23d81e8055
+	github.com/nbd-wtf/go-nostr v0.51.4
 	github.com/puzpuzpuz/xsync/v3 v3.5.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
@@ -58,14 +58,14 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.58.0 // indirect
+	github.com/valyala/fasthttp v1.59.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.32.0 // indirect
 	go.opentelemetry.io/otel/metric v1.32.0 // indirect
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
 	golang.org/x/arch v0.15.0 // indirect
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
