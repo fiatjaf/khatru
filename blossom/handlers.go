@@ -73,7 +73,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// read first bytes of upload so we can find out the filetype
 	b := make([]byte, min(50, size), size)
-	if _, err = r.Body.Read(b); err != nil {
+	if n, err := r.Body.Read(b); err != nil && n != size {
 		blossomError(w, "failed to read initial bytes of upload body: "+err.Error(), 400)
 		return
 	}
