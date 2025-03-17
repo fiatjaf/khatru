@@ -18,7 +18,8 @@ func main() {
     bl := blossom.New(relay, "http://localhost:3334")
 
     // create a database for keeping track of blob metadata
-	bl.Store = blossom.EventStoreBlobIndexWrapper{Store: db, ServiceURL: bl.ServiceURL}
+    // (do not use the same database used for the relay events)
+	bl.Store = blossom.EventStoreBlobIndexWrapper{Store: blobdb, ServiceURL: bl.ServiceURL}
 
     // implement the required storage functions
     bl.StoreBlob = append(bl.StoreBlob, func(ctx context.Context, sha256 string, body []byte) error {
