@@ -19,7 +19,7 @@ export default {
           { text: 'HTTP Integration', link: '/core/embed' },
           { text: 'Request Routing', link: '/core/routing' },
           { text: 'Management API', link: '/core/management' },
-          { text: 'Media Storage', link: '/core/blossom' },
+          { text: 'Media Storage (Blossom)', link: '/core/blossom' },
         ]
       },
       {
