@@ -1,12 +1,12 @@
 package blossom
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/cloudwego/base64x"
 	"github.com/mailru/easyjson"
 	"github.com/nbd-wtf/go-nostr"
 )
@@ -17,7 +17,7 @@ func readAuthorization(r *http.Request) (*nostr.Event, error) {
 		return nil, nil
 	}
 
-	eventj, err := base64x.StdEncoding.DecodeString(token[6:])
+	eventj, err := base64.StdEncoding.DecodeString(token[6:])
 	if err != nil {
 		return nil, fmt.Errorf("invalid base64 token")
 	}
