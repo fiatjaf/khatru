@@ -49,7 +49,7 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 			return
 		}
 
-		if len(strings.SplitN(r.URL.Path, ".", 2)[0]) == 65 {
+		if (len(r.URL.Path) == 65 || strings.Index(r.URL.Path, ".") == 65) && strings.Index(r.URL.Path[1:], "/") == -1 {
 			if r.Method == "HEAD" {
 				bs.handleHasBlob(w, r)
 				return
