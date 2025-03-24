@@ -25,7 +25,7 @@ func readAuthorization(r *http.Request) (*nostr.Event, error) {
 	if err := easyjson.Unmarshal(eventj, &evt); err != nil {
 		return nil, fmt.Errorf("broken event")
 	}
-	if evt.Kind != 24242 || len(evt.ID) != 64 || !evt.CheckID() {
+	if evt.Kind != 24242 || !evt.CheckID() {
 		return nil, fmt.Errorf("invalid event")
 	}
 	if ok, _ := evt.CheckSignature(); !ok {
