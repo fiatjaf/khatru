@@ -17,6 +17,7 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip42"
 	"github.com/nbd-wtf/go-nostr/nip45"
 	"github.com/nbd-wtf/go-nostr/nip45/hyperloglog"
+	"github.com/nbd-wtf/go-nostr/nip70"
 	"github.com/nbd-wtf/go-nostr/nip77"
 	"github.com/nbd-wtf/go-nostr/nip77/negentropy"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -175,28 +176,30 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					}
 
 					// check NIP-70 protected
-					for _, v := range env.Event.Tags {
-						if len(v) == 1 && v[0] == "-" {
-							msg := "must be published by event author"
-							authed := GetAuthed(ctx)
-							if authed == "" {
-								RequestAuth(ctx)
-								ws.WriteJSON(nostr.OKEnvelope{
-									EventID: env.Event.ID,
-									OK:      false,
-									Reason:  "auth-required: " + msg,
-								})
-								return
-							}
-							if authed != env.Event.PubKey {
-								ws.WriteJSON(nostr.OKEnvelope{
-									EventID: env.Event.ID,
-									OK:      false,
-									Reason:  "blocked: " + msg,
-								})
-								return
-							}
+					if nip70.IsProtected(env.Event) {
+						authed := GetAuthed(ctx)
+						if authed == "" {
+							RequestAuth(ctx)
+							ws.WriteJSON(nostr.OKEnvelope{
+								EventID: env.Event.ID,
+								OK:      false,
+								Reason:  "auth-required: must be published by authenticated event author",
+							})
+							return
+						} else if authed != env.Event.PubKey {
+							ws.WriteJSON(nostr.OKEnvelope{
+								EventID: env.Event.ID,
+								OK:      false,
+								Reason:  "blocked: must be published by event author",
+							})
+							return
 						}
+					} else if nip70.HasEmbeddedProtected(env.Event) {
+						ws.WriteJSON(nostr.OKEnvelope{
+							EventID: env.Event.ID,
+							OK:      false,
+							Reason:  "blocked: can't repost nip70 protected",
+						})
 					}
 
 					srl := rl
