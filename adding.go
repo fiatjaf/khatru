@@ -28,7 +28,7 @@ func (rl *Relay) AddEvent(ctx context.Context, evt *nostr.Event) (skipBroadcast 
 		}
 	}
 
-	if 20000 <= evt.Kind && evt.Kind < 30000 {
+	if nostr.IsEphemeralKind(evt.Kind) {
 		// do not store ephemeral events
 		for _, oee := range rl.OnEphemeralEvent {
 			oee(ctx, evt)

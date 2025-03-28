@@ -2,7 +2,6 @@ package policies
 
 import (
 	"context"
-
 	"slices"
 
 	"github.com/fiatjaf/khatru"

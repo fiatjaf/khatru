@@ -16,7 +16,7 @@ func main() {
 	relay := khatru.NewRelay()
 
 	db := lmdb.LMDBBackend{Path: "/tmp/exclusive"}
-	os.MkdirAll(db.Path, 0755)
+	os.MkdirAll(db.Path, 0o755)
 	if err := db.Init(); err != nil {
 		panic(err)
 	}
