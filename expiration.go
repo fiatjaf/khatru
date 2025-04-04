@@ -73,6 +73,7 @@ func (em *expirationManager) initialScan(ctx context.Context) {
 	defer em.mu.Unlock()
 
 	// query all events
+	ctx = context.WithValue(ctx, internalCallKey, struct{}{})
 	for _, query := range em.relay.QueryEvents {
 		ch, err := query(ctx, nostr.Filter{})
 		if err != nil {
