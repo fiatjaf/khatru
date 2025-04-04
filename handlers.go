@@ -200,6 +200,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							OK:      false,
 							Reason:  "blocked: can't repost nip70 protected",
 						})
+						return
 					}
 
 					srl := rl
