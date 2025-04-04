@@ -10,6 +10,7 @@ const (
 	wsKey = iota
 	subscriptionIdKey
 	nip86HeaderAuthKey
+	internalCallKey
 )
 
 func RequestAuth(ctx context.Context) {
@@ -38,6 +39,12 @@ func GetAuthed(ctx context.Context) string {
 		return nip86Auth.(string)
 	}
 	return ""
+}
+
+// IsInternalCall returns true when a call to QueryEvents, for example, is being made because of a deletion
+// or expiration request.
+func IsInternalCall(ctx context.Context) bool {
+	return ctx.Value(internalCallKey) != nil
 }
 
 func GetIP(ctx context.Context) string {

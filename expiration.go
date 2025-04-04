@@ -107,6 +107,7 @@ func (em *expirationManager) checkExpiredEvents(ctx context.Context) {
 
 		heap.Pop(&em.events)
 
+		ctx := context.WithValue(ctx, internalCallKey, struct{}{})
 		for _, query := range em.relay.QueryEvents {
 			ch, err := query(ctx, nostr.Filter{IDs: []string{next.id}})
 			if err != nil {

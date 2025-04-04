@@ -39,6 +39,7 @@ func (rl *Relay) handleDeleteRequest(ctx context.Context, evt *nostr.Event) erro
 				continue
 			}
 
+			ctx := context.WithValue(ctx, internalCallKey, struct{}{})
 			for _, query := range rl.QueryEvents {
 				ch, err := query(ctx, f)
 				if err != nil {
