@@ -33,12 +33,14 @@ type WebSocket struct {
 
 func (ws *WebSocket) WriteJSON(any any) error {
 	ws.mutex.Lock()
-	defer ws.mutex.Unlock()
-	return ws.conn.WriteJSON(any)
+	err := ws.conn.WriteJSON(any)
+	ws.mutex.Unlock()
+	return err
 }
 
 func (ws *WebSocket) WriteMessage(t int, b []byte) error {
 	ws.mutex.Lock()
-	defer ws.mutex.Unlock()
-	return ws.conn.WriteMessage(t, b)
+	err := ws.conn.WriteMessage(t, b)
+	ws.mutex.Unlock()
+	return err
 }
