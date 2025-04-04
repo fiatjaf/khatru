@@ -134,3 +134,16 @@ func (em *expirationManager) trackEvent(evt *nostr.Event) {
 		em.mu.Unlock()
 	}
 }
+
+func (em *expirationManager) removeEvent(id string) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	// Find and remove the event from the heap
+	for i := 0; i < len(em.events); i++ {
+		if em.events[i].id == id {
+			heap.Remove(&em.events, i)
+			break
+		}
+	}
+}
