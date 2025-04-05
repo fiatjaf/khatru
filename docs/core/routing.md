@@ -47,7 +47,7 @@ router.Route().
 			return true
 		case event.Kind <= 12 && event.Kind >= 9:
 			return true
-		case event.Tags.GetFirst([]string{"h", ""}) != nil:
+		case event.Tags.Find("h") != nil:
 			return true
 		default:
 			return false

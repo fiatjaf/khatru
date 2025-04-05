@@ -52,7 +52,7 @@ func main() {
 			return slices.Contains(filter.Kinds, 1) && slices.Contains(filter.Tags["t"], "spam")
 		}).
 		Event(func(event *nostr.Event) bool {
-			return event.Kind == 1 && event.Tags.GetFirst([]string{"t", "spam"}) != nil
+			return event.Kind == 1 && event.Tags.FindWithValue("t", "spam") != nil
 		}).
 		Relay(r2)
 

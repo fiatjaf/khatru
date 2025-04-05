@@ -25,7 +25,7 @@ func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request
 		blossomError(w, "missing \"Authorization\" header", 401)
 		return
 	}
-	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
+	if auth.Tags.FindWithValue("t", "upload") == nil {
 		blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
 		return
 	}
@@ -59,7 +59,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		blossomError(w, "missing \"Authorization\" header", 401)
 		return
 	}
-	if auth.Tags.GetFirst([]string{"t", "upload"}) == nil {
+	if auth.Tags.FindWithValue("t", "upload") == nil {
 		blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
 		return
 	}
@@ -163,13 +163,13 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 
 	// if there is one, we check if it has the extra requirements
 	if auth != nil {
-		if auth.Tags.GetFirst([]string{"t", "get"}) == nil {
+		if auth.Tags.FindWithValue("t", "get") == nil {
 			blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
 			return
 		}
 
-		if auth.Tags.GetFirst([]string{"x", hhash}) == nil &&
-			auth.Tags.GetFirst([]string{"server", bs.ServiceURL}) == nil {
+		if auth.Tags.FindWithValue("x", hhash) == nil &&
+			auth.Tags.FindWithValue("server", bs.ServiceURL) == nil {
 			blossomError(w, "invalid \"Authorization\" event \"x\" or \"server\" tag", 403)
 			return
 		}
@@ -239,7 +239,7 @@ func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
 
 	// if there is one, we check if it has the extra requirements
 	if auth != nil {
-		if auth.Tags.GetFirst([]string{"t", "list"}) == nil {
+		if auth.Tags.FindWithValue("t", "list") == nil {
 			blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
 			return
 		}
@@ -283,7 +283,7 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if auth != nil {
-		if auth.Tags.GetFirst([]string{"t", "delete"}) == nil {
+		if auth.Tags.FindWithValue("t", "delete") == nil {
 			blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
 			return
 		}
@@ -296,8 +296,8 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hhash = hhash[1:]
-	if auth.Tags.GetFirst([]string{"x", hhash}) == nil &&
-		auth.Tags.GetFirst([]string{"server", bs.ServiceURL}) == nil {
+	if auth.Tags.FindWithValue("x", hhash) == nil &&
+		auth.Tags.FindWithValue("server", bs.ServiceURL) == nil {
 		blossomError(w, "invalid \"Authorization\" event \"x\" or \"server\" tag", 403)
 		return
 	}
