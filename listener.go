@@ -132,15 +132,20 @@ func (rl *Relay) removeClientAndListeners(ws *WebSocket) {
 	delete(rl.clients, ws)
 }
 
-func (rl *Relay) notifyListeners(event *nostr.Event) {
+// returns how many listeners were notified
+func (rl *Relay) notifyListeners(event *nostr.Event) int {
+	count := 0
+listenersloop:
 	for _, listener := range rl.listeners {
 		if listener.filter.Matches(event) {
 			for _, pb := range rl.PreventBroadcast {
 				if pb(listener.ws, event) {
-					return
+					continue listenersloop
 				}
 			}
 			listener.ws.WriteJSON(nostr.EventEnvelope{SubscriptionID: &listener.id, Event: *event})
+			count++
 		}
 	}
+	return count
 }

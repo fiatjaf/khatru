@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -141,6 +142,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
+			// this is safe because ReadMessage() will always create a new slice
 			message := unsafe.String(unsafe.SliceData(msgb), len(msgb))
 
 			// parse messages sequentially otherwise sonic breaks
@@ -215,9 +217,12 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					if env.Event.Kind == 5 {
 						// this always returns "blocked: " whenever it returns an error
 						writeErr = srl.handleDeleteRequest(ctx, &env.Event)
+					} else if nostr.IsEphemeralKind(env.Event.Kind) {
+						// this will also always return a prefixed reason
+						writeErr = srl.handleEphemeral(ctx, &env.Event)
 					} else {
 						// this will also always return a prefixed reason
-						skipBroadcast, writeErr = srl.AddEvent(ctx, &env.Event)
+						skipBroadcast, writeErr = srl.handleNormal(ctx, &env.Event)
 					}
 
 					var reason string
@@ -227,9 +232,20 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 							ovw(ctx, &env.Event)
 						}
 						if !skipBroadcast {
-							srl.notifyListeners(&env.Event)
+							n := srl.notifyListeners(&env.Event)
+
+							// the number of notified listeners matters in ephemeral events
+							if nostr.IsEphemeralKind(env.Event.Kind) {
+								if n == 0 {
+									ok = false
+									reason = "mute: no one was listening for this"
+								} else {
+									reason = "broadcasted to " + strconv.Itoa(n) + " listeners"
+								}
+							}
 						}
 					} else {
+						ok = false
 						reason = writeErr.Error()
 						if strings.HasPrefix(reason, "auth-required:") {
 							RequestAuth(ctx)
@@ -244,14 +260,13 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					var total int64
 					var hll *hyperloglog.HyperLogLog
-					uneligibleForHLL := false
 
 					srl := rl
 					if rl.getSubRelayFromFilter != nil {
 						srl = rl.getSubRelayFromFilter(env.Filter)
 					}
 
-					if offset := nip45.HyperLogLogEventPubkeyOffsetForFilter(env.Filter); offset != -1 && !uneligibleForHLL {
+					if offset := nip45.HyperLogLogEventPubkeyOffsetForFilter(env.Filter); offset != -1 {
 						total, hll = srl.handleCountRequestWithHLL(ctx, ws, env.Filter, offset)
 					} else {
 						total = srl.handleCountRequest(ctx, ws, env.Filter)
