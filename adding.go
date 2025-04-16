@@ -33,6 +33,23 @@ func (rl *Relay) handleNormal(ctx context.Context, evt *nostr.Event) (skipBroadc
 		}
 	}
 
+	// Check to see if the event has been deleted by ID
+	for _, query := range rl.QueryEvents {
+		ch, err := query(ctx, nostr.Filter{
+			Kinds: []int{5},
+			Tags:  nostr.TagMap{"#e": []string{evt.ID}},
+		})
+		if err != nil {
+			continue
+		}
+		target := <-ch
+		if target == nil {
+			continue
+		}
+
+		return true, errors.New("blocked: this event has been deleted")
+	}
+
 	// will store
 	// regular kinds are just saved directly
 	if nostr.IsRegularKind(evt.Kind) {
@@ -47,6 +64,33 @@ func (rl *Relay) handleNormal(ctx context.Context, evt *nostr.Event) (skipBroadc
 			}
 		}
 	} else {
+		// Check to see if the event has been deleted by address
+		for _, query := range rl.QueryEvents {
+			dTagValue := ""
+			for _, tag := range evt.Tags {
+				if len(tag) > 0 && tag[0] == "d" {
+					dTagValue = tag[1]
+					break
+				}
+			}
+
+			address := fmt.Sprintf("%d:%s:%s", evt.Kind, evt.PubKey, dTagValue)
+			ch, err := query(ctx, nostr.Filter{
+				Kinds: []int{5},
+				Since: &evt.CreatedAt,
+				Tags:  nostr.TagMap{"#a": []string{address}},
+			})
+			if err != nil {
+				continue
+			}
+			target := <-ch
+			if target == nil {
+				continue
+			}
+
+			return true, errors.New("blocked: this event has been deleted")
+		}
+
 		// otherwise it's a replaceable -- so we'll use the replacer functions if we have any
 		if len(rl.ReplaceEvent) > 0 {
 			for _, repl := range rl.ReplaceEvent {
