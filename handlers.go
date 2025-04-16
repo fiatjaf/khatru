@@ -217,12 +217,16 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 					if env.Event.Kind == 5 {
 						// this always returns "blocked: " whenever it returns an error
 						writeErr = srl.handleDeleteRequest(ctx, &env.Event)
-					} else if nostr.IsEphemeralKind(env.Event.Kind) {
-						// this will also always return a prefixed reason
-						writeErr = srl.handleEphemeral(ctx, &env.Event)
-					} else {
-						// this will also always return a prefixed reason
-						skipBroadcast, writeErr = srl.handleNormal(ctx, &env.Event)
+					}
+
+					if writeErr == nil {
+						if nostr.IsEphemeralKind(env.Event.Kind) {
+							// this will also always return a prefixed reason
+							writeErr = srl.handleEphemeral(ctx, &env.Event)
+						} else {
+							// this will also always return a prefixed reason
+							skipBroadcast, writeErr = srl.handleNormal(ctx, &env.Event)
+						}
 					}
 
 					var reason string

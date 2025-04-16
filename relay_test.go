@@ -151,33 +151,64 @@ func TestBasicRelayFunctionality(t *testing.T) {
 			t.Fatalf("failed to publish deletion event: %v", err)
 		}
 
-		// Try to query the deleted event
-		sub, err := client2.Subscribe(ctx, []nostr.Filter{{
-			IDs: []string{evt3.ID},
-		}})
-		if err != nil {
-			t.Fatalf("failed to subscribe: %v", err)
-		}
-		defer sub.Unsub()
+		{
+			// Try to query the deleted event
+			sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+				IDs: []string{evt3.ID},
+			}})
+			if err != nil {
+				t.Fatalf("failed to subscribe: %v", err)
+			}
+			defer sub.Unsub()
 
-		// Should get EOSE without receiving the deleted event
-		gotEvent := false
-		for {
-			select {
-			case <-sub.Events:
-				gotEvent = true
-			case <-sub.EndOfStoredEvents:
-				if gotEvent {
-					t.Error("should not have received deleted event")
+			// Should get EOSE without receiving the deleted event
+			gotEvent := false
+		DeletedLoop:
+			for {
+				select {
+				case <-sub.Events:
+					gotEvent = true
+				case <-sub.EndOfStoredEvents:
+					if gotEvent {
+						t.Error("should not have received deleted event")
+					}
+					break DeletedLoop
+				case <-ctx.Done():
+					t.Fatal("timeout waiting for EOSE")
 				}
-				return
-			case <-ctx.Done():
-				t.Fatal("timeout waiting for EOSE")
+			}
+		}
+
+		{
+			// Try to query the deletion itself
+			sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+				Kinds: []int{5},
+			}})
+			if err != nil {
+				t.Fatalf("failed to subscribe: %v", err)
+			}
+			defer sub.Unsub()
+
+			// Should get EOSE without receiving the deleted event
+			gotEvent := false
+		DeletionLoop:
+			for {
+				select {
+				case <-sub.Events:
+					gotEvent = true
+				case <-sub.EndOfStoredEvents:
+					if !gotEvent {
+						t.Error("should have received deletion event")
+					}
+					break DeletionLoop
+				case <-ctx.Done():
+					t.Fatal("timeout waiting for EOSE")
+				}
 			}
 		}
 	})
 
-	// test 4: teplaceable events
+	// test 4: replaceable events
 	t.Run("replaceable events", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
