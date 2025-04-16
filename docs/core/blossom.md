@@ -90,4 +90,4 @@ bl.Store = blossom.EventStoreBlobIndexWrapper{
 }
 ```
 
-This will store blob metadata as special `kind:24242` events, but you shouldn't have to worry about it as the wrapper handles all the complexity of tracking ownership and managing blob lifecycle. Jut avoid reusing the same datastore that is used for the actual relay events unless you know what you're doing.
+This will store blob metadata as special `kind:24242` events, but you shouldn't have to worry about it as the wrapper handles all the complexity of tracking ownership and managing blob lifecycle. Just avoid reusing the same datastore that is used for the actual relay events unless you know what you're doing.
