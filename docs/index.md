@@ -4,6 +4,8 @@ layout: home
 hero:
   name: khatru
   text: a framework for making Nostr relays
+  image:
+    src: /logo.png
   tagline: write your custom relay with code over configuration
   actions:
     - theme: brand
