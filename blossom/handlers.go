@@ -336,8 +336,8 @@ func (bs BlossomServer) handleReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var evt *nostr.Event
-	if err := json.Unmarshal(body, evt); err != nil {
+	var evt nostr.Event
+	if err := json.Unmarshal(body, &evt); err != nil {
 		blossomError(w, "can't parse event", 400)
 		return
 	}
@@ -353,7 +353,7 @@ func (bs BlossomServer) handleReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, rr := range bs.ReceiveReport {
-		if err := rr(r.Context(), evt); err != nil {
+		if err := rr(r.Context(), &evt); err != nil {
 			blossomError(w, "failed to receive report: "+err.Error(), 500)
 			return
 		}
@@ -361,6 +361,96 @@ func (bs BlossomServer) handleReport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
+	auth, err := readAuthorization(r)
+	if err != nil {
+		blossomError(w, "invalid \"Authorization\": "+err.Error(), 404)
+		return
+	}
+	if auth == nil {
+		blossomError(w, "missing \"Authorization\" header", 401)
+		return
+	}
+	if auth.Tags.FindWithValue("t", "upload") == nil {
+		blossomError(w, "invalid \"Authorization\" event \"t\" tag", 403)
+		return
+	}
+
+	var body struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		blossomError(w, "invalid request body: "+err.Error(), 400)
+		return
+	}
+
+	// download the blob
+	resp, err := http.Get(body.URL)
+	if err != nil {
+		blossomError(w, "failed to download blob: "+err.Error(), 400)
+		return
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		blossomError(w, "failed to read blob: "+err.Error(), 400)
+		return
+	}
+
+	// calculate sha256 hash
+	hash := sha256.Sum256(b)
+	hhash := hex.EncodeToString(hash[:])
+
+	// verify hash matches x tag in auth event
+	if auth.Tags.FindWithValue("x", hhash) == nil {
+		blossomError(w, "blob hash does not match any \"x\" tag in authorization event", 403)
+		return
+	}
+
+	// get content type and extension
+	var ext string
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != "" {
+		ext = getExtension(contentType)
+	} else {
+		// Try to detect from URL extension
+		if idx := strings.LastIndex(body.URL, "."); idx >= 0 {
+			ext = body.URL[idx:]
+		}
+	}
+
+	// run reject hooks
+	for _, ru := range bs.RejectUpload {
+		reject, reason, code := ru(r.Context(), auth, len(b), ext)
+		if reject {
+			blossomError(w, reason, code)
+			return
+		}
+	}
+
+	// create blob descriptor
+	bd := BlobDescriptor{
+		URL:      bs.ServiceURL + "/" + hhash + ext,
+		SHA256:   hhash,
+		Size:     len(b),
+		Type:     contentType,
+		Uploaded: nostr.Now(),
+	}
+
+	// store blob metadata
+	if err := bs.Store.Keep(r.Context(), bd, auth.PubKey); err != nil {
+		blossomError(w, "failed to save metadata: "+err.Error(), 400)
+		return
+	}
+
+	// store actual blob
+	for _, sb := range bs.StoreBlob {
+		if err := sb(r.Context(), hhash, b); err != nil {
+			blossomError(w, "failed to save blob: "+err.Error(), 500)
+			return
+		}
+	}
+
+	json.NewEncoder(w).Encode(bd)
 }
 
 func (bs BlossomServer) handleNegentropy(w http.ResponseWriter, r *http.Request) {

@@ -44,6 +44,11 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 			}
 		}
 
+		if r.URL.Path == "/mirror" && r.Method == "PUT" {
+			bs.handleMirror(w, r)
+			return
+		}
+
 		if strings.HasPrefix(r.URL.Path, "/list/") && r.Method == "GET" {
 			bs.handleList(w, r)
 			return
