@@ -229,6 +229,7 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(bd.Size))
 	w.Header().Set("Accept-Ranges", "bytes")
+	w.Header().Set("Content-Type", bd.Type)
 
 }
 
