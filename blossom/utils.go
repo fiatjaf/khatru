@@ -10,6 +10,28 @@ func blossomError(w http.ResponseWriter, msg string, code int) {
 	w.WriteHeader(code)
 }
 
+func blossomRedirect(w http.ResponseWriter, redir string, code int) {
+	w.Header().Set("Location", redir)
+	switch code {
+	case 300:
+		w.WriteHeader(http.StatusMultipleChoices)
+	case 301:
+		w.WriteHeader(http.StatusMovedPermanently)
+	case 302:
+		w.WriteHeader(http.StatusFound)
+	case 303:
+		w.WriteHeader(http.StatusSeeOther)
+	case 304:
+		w.WriteHeader(http.StatusNotModified)
+	case 305:
+		w.WriteHeader(http.StatusUseProxy)
+	case 307:
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	case 308:
+		w.WriteHeader(http.StatusPermanentRedirect)
+	}
+}
+
 func getExtension(mimetype string) string {
 	if mimetype == "" {
 		return ""

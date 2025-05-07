@@ -453,5 +453,10 @@ func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(bd)
 }
 
+func (bs BlossomServer) handleMedia(w http.ResponseWriter, r *http.Request) {
+	blossomRedirect(w, "/upload", 307)
+	return
+}
+
 func (bs BlossomServer) handleNegentropy(w http.ResponseWriter, r *http.Request) {
 }
