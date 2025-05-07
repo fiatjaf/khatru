@@ -227,6 +227,9 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 		blossomError(w, "file not found", 404)
 		return
 	}
+	w.Header().Set("Content-Length", strconv.Itoa(bd.Size))
+	w.Header().Set("Accept-Ranges", "bytes")
+
 }
 
 func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
