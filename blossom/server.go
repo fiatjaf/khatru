@@ -47,15 +47,6 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 			bs.handleMedia(w, r)
 			return
 		}
-		if r.URL.Path == "/upload" {
-			if r.Method == "PUT" {
-				bs.handleUpload(w, r)
-				return
-			} else if r.Method == "HEAD" {
-				bs.handleUploadCheck(w, r)
-				return
-			}
-		}
 		if r.URL.Path == "/mirror" && r.Method == "PUT" {
 			bs.handleMirror(w, r)
 			return
