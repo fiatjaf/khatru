@@ -458,7 +458,7 @@ func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
 }
 
 func (bs BlossomServer) handleMedia(w http.ResponseWriter, r *http.Request) {
-	blossomRedirect(w, "/upload", 307)
+	http.Redirect(w, r, "/upload", 307)
 	return
 }
 
