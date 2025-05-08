@@ -43,7 +43,10 @@ func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 				return
 			}
 		}
-
+		if r.URL.Path == "/media" {
+			bs.handleMedia(w, r)
+			return
+		}
 		if r.URL.Path == "/mirror" && r.Method == "PUT" {
 			bs.handleMirror(w, r)
 			return
