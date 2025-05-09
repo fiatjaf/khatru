@@ -142,6 +142,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return response
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(bd)
 }
 
