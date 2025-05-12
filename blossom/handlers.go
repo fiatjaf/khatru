@@ -186,7 +186,21 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 
 	var ext string
 	if len(spl) == 2 {
-		ext = "." + spl[1]
+		ext = spl[1]
+	}
+
+	if len(bs.RedirectGet) > 0 {
+		for _, redirect := range bs.RedirectGet {
+			redirectURL, code, err := redirect(r.Context(), hhash, ext)
+			if err == nil && redirectURL != "" {
+				// Not sure if browsers will cache redirects
+				// But it doesn't hurt anyway
+				w.Header().Set("ETag", hhash)
+				w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+				http.Redirect(w, r, redirectURL, code)
+				return
+			}
+		}
 	}
 
 	for _, lb := range bs.LoadBlob {
@@ -201,7 +215,7 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("ETag", hhash)
 			w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
-			http.ServeContent(w, r, hhash+ext, t, reader)
+			http.ServeContent(w, r, hhash+"."+ext, t, reader)
 			return
 		}
 	}
