@@ -220,7 +220,11 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("ETag", hhash)
 			w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
-			http.ServeContent(w, r, hhash+"."+ext, t, reader)
+			name := hhash
+			if ext != "" {
+				name += "." + ext
+			}
+			http.ServeContent(w, r, name, t, reader)
 			return
 		}
 	}
