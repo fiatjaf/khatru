@@ -18,6 +18,7 @@ type BlossomServer struct {
 	LoadBlob      []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
 	DeleteBlob    []func(ctx context.Context, sha256 string) error
 	ReceiveReport []func(ctx context.Context, reportEvt *nostr.Event) error
+	RedirectGet   []func(ctx context.Context, sha256 string, fileExtension string) (url string, code int, err error)
 
 	RejectUpload []func(ctx context.Context, auth *nostr.Event, size int, ext string) (bool, string, int)
 	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
