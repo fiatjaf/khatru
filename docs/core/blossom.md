@@ -47,6 +47,52 @@ You can integrate any storage backend by implementing the three core functions:
 - `LoadBlob`: Retrieve the blob data
 - `DeleteBlob`: Remove the blob data
 
+## URL Redirection
+
+Blossom supports redirection to external storage locations when retrieving blobs. This is useful when you want to serve files from a CDN or cloud storage service while keeping Blossom compatibility.
+
+### Simple Redirect
+
+You can use the `WithRedirectURL` option when creating your Blossom server to enable this functionality:
+
+```go
+// Create blossom server with redirection enabled
+bl := blossom.New(
+    relay, 
+    "http://localhost:3334",
+    blossom.WithRedirectURL("https://blossom.exampleserver.com", http.StatusMovedPermanently),
+)
+```
+
+By default the `WithRedirectURL` option will append the blob's SHA256 hash and file extension to the redirect URL.
+For example, if the blob's SHA256 hash is `b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553` and the file extension is `pdf`, 
+the redirect URL will be https://blossom.exampleserver.com/b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf.
+
+### Redirect URL placeholders
+
+You can also customize the redirect URL by passing `{sha256}` and `{extension}` placeholders in the URL. For example:
+
+```go
+bl := blossom.New(
+    relay, 
+    "http://localhost:3334",
+    blossom.WithRedirectURL("https://mybucket.myblobstorage.com/{sha256}.{extension}?ref=xxxx", http.StatusFound),
+)
+```
+
+### Custom Redirect Function
+
+If you need more control over the redirect URL, you can implement a custom redirect function. This function should return a string with the redirect URL and an HTTP status code.
+
+```go
+bl.RedirectGet = append(bl.RedirectGet, func(ctx context.Context, sha256 string, ext string) (string, int, error) {
+    // generate a custom redirect URL
+    cid := IpfsCID(sha256)
+	redirectURL := fmt.Sprintf("https://ipfs.io/ipfs/%s/%s.%s", cid, sha256, ext)
+    return redirectURL, http.StatusTemporaryRedirect, nil
+})
+```
+
 ## Upload Restrictions
 
 You can implement upload restrictions using the `RejectUpload` hook. Here's an example that limits file size and restricts uploads to whitelisted users:
