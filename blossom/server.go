@@ -13,6 +13,7 @@ import (
 type BlossomServer struct {
 	ServiceURL string
 	Store      BlobIndex
+	Info       *InformationDocument
 
 	StoreBlob     []func(ctx context.Context, sha256 string, body []byte) error
 	LoadBlob      []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
@@ -28,12 +29,20 @@ type BlossomServer struct {
 func New(rl *khatru.Relay, serviceURL string) *BlossomServer {
 	bs := &BlossomServer{
 		ServiceURL: serviceURL,
+		Info: &InformationDocument{
+			Software:      "https://github.com/fiatjaf/khatru.git",
+			SupportedBUDs: []int{1, 2, 4, 5, 6, 9, 12},
+		},
 	}
 
 	base := rl.Router()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/info" {
+			bs.handleInfoDocument(w, r)
+			return
+		}
 		if r.URL.Path == "/upload" {
 			if r.Method == "PUT" {
 				bs.handleUpload(w, r)
