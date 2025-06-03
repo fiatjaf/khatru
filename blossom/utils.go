@@ -26,6 +26,8 @@ func getExtension(mimetype string) string {
 		return ".webp"
 	case "video/mp4":
 		return ".mp4"
+	case "application/vnd.android.package-archive":
+		return ".apk"
 	}
 
 	exts, _ := mime.ExtensionsByType(mimetype)

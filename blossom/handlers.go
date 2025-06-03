@@ -86,6 +86,11 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		ext = getExtension(mimetype)
 	}
 
+	// special case of android apk -- if we see a .zip but they say it's .apk we trust them
+	if ext == ".zip" && getExtension(r.Header.Get("Content-Type")) == ".apk" {
+		ext = ".apk"
+	}
+
 	// run the reject hooks
 	for _, ru := range bs.RejectUpload {
 		reject, reason, code := ru(r.Context(), auth, size, ext)
@@ -231,7 +236,6 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(bd.Size))
 	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Content-Type", bd.Type)
-
 }
 
 func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
