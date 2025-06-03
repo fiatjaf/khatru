@@ -90,17 +90,6 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 	var mimet string
 	mimet = mime.TypeByExtension(ext)
 
-	// Android .apk magic bytes is similar to .zip file, this is trick to find .apk files.
-	if ext == ".zip" {
-		decoder := charmap.ISO8859_1.NewDecoder()
-		decodedBytes, _ := decoder.Bytes(b)
-		decodedString := string(decodedBytes)
-		if strings.Contains(decodedString, "AndroidManifest.xml") {
-			ext = ".apk"
-			mimet = "application/vnd.android.package-archive"
-		}
-	}
-
 	// run the reject hooks
 	for _, ru := range bs.RejectUpload {
 		reject, reason, code := ru(r.Context(), auth, size, ext)
@@ -134,6 +123,17 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	hash := sha256.Sum256(b)
 	hhash := hex.EncodeToString(hash[:])
+
+	// Android .apk magic bytes is similar to .zip file, this is trick to find .apk files.
+	if ext == ".zip" {
+		decoder := charmap.ISO8859_1.NewDecoder()
+		decodedBytes, _ := decoder.Bytes(b)
+		decodedString := string(decodedBytes)
+		if strings.Contains(decodedString, "AndroidManifest.xml") {
+			ext = ".apk"
+			mimet = "application/vnd.android.package-archive"
+		}
+	}
 
 	// keep track of the blob descriptor
 	bd := BlobDescriptor{
