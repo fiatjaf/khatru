@@ -12,6 +12,7 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.5.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/text v0.25.0
 )
 
 require (

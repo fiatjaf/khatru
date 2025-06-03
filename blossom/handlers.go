@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/magic"
 	"github.com/nbd-wtf/go-nostr"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func (bs BlossomServer) handleUploadCheck(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +87,20 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		ext = getExtension(mimetype)
 	}
 
+	var mimet string
+	mimet = mime.TypeByExtension(ext)
+
+	// Android .apk magic bytes is similar to .zip file, this is trick to find .apk files.
+	if ext == ".zip" {
+		decoder := charmap.ISO8859_1.NewDecoder()
+		decodedBytes, _ := decoder.Bytes(b)
+		decodedString := string(decodedBytes)
+		if strings.Contains(decodedString, "AndroidManifest.xml") {
+			ext = ".apk"
+			mimet = "application/vnd.android.package-archive"
+		}
+	}
+
 	// run the reject hooks
 	for _, ru := range bs.RejectUpload {
 		reject, reason, code := ru(r.Context(), auth, size, ext)
@@ -125,7 +140,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 		URL:      bs.ServiceURL + "/" + hhash + ext,
 		SHA256:   hhash,
 		Size:     len(b),
-		Type:     mime.TypeByExtension(ext),
+		Type:     mimet,
 		Uploaded: nostr.Now(),
 	}
 	if err := bs.Store.Keep(r.Context(), bd, auth.PubKey); err != nil {
@@ -231,7 +246,6 @@ func (bs BlossomServer) handleHasBlob(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(bd.Size))
 	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Content-Type", bd.Type)
-
 }
 
 func (bs BlossomServer) handleList(w http.ResponseWriter, r *http.Request) {
