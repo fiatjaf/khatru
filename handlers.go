@@ -240,12 +240,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 							// the number of notified listeners matters in ephemeral events
 							if nostr.IsEphemeralKind(env.Event.Kind) {
-								if n == 0 {
-									ok = false
-									reason = "mute: no one was listening for this"
-								} else {
-									reason = "broadcasted to " + strconv.Itoa(n) + " listeners"
-								}
+								reason = "broadcasted to " + strconv.Itoa(n) + " listeners"
 							}
 						}
 					} else {
