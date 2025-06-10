@@ -130,6 +130,10 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 			// danger: this assumes the struct fields are appropriately named
 			methodName := strings.ToLower(field.Name)
 
+			if methodName == "rejectapicall" {
+				continue
+			}
+
 			// assign this only if the function was defined
 			if !reflect.ValueOf(value).IsNil() {
 				methods = append(methods, methodName)
