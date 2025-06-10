@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -198,8 +199,13 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 		for _, redirect := range bs.RedirectGet {
 			redirectURL, code, err := redirect(r.Context(), hhash, ext)
 			if err == nil && redirectURL != "" {
-				// Not sure if browsers will cache redirects
-				// But it doesn't hurt anyway
+				// check that the redirectURL contains the hash of the file
+				if ok, _ := regexp.MatchString(`\b`+hhash+`\b`, redirectURL); !ok {
+					continue
+				}
+
+				// not sure if browsers will cache redirects
+				// but it doesn't hurt anyway
 				w.Header().Set("ETag", hhash)
 				w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
 				http.Redirect(w, r, redirectURL, code)
