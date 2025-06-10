@@ -131,7 +131,7 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 
 			// assign this only if the function was defined
 			if mav.Field(i).Interface() != nil {
-				methods[i] = methodName
+				methods = append(methods, methodName)
 			}
 		}
 		resp.Result = methods
