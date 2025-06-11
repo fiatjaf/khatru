@@ -201,7 +201,7 @@ func (rl *Relay) HandleNIP86(w http.ResponseWriter, r *http.Request) {
 		case nip86.ListBannedEvents:
 			if rl.ManagementAPI.ListBannedEvents == nil {
 				resp.Error = fmt.Sprintf("method %s not supported", thing.MethodName())
-			} else if result, err := rl.ManagementAPI.ListEventsNeedingModeration(ctx); err != nil {
+			} else if result, err := rl.ManagementAPI.ListBannedEvents(ctx); err != nil {
 				resp.Error = err.Error()
 			} else {
 				resp.Result = result
