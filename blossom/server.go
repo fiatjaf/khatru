@@ -14,16 +14,16 @@ type BlossomServer struct {
 	ServiceURL string
 	Store      BlobIndex
 
-	StoreBlob     []func(ctx context.Context, sha256 string, body []byte) error
-	LoadBlob      []func(ctx context.Context, sha256 string) (io.ReadSeeker, error)
-	DeleteBlob    []func(ctx context.Context, sha256 string) error
+	StoreBlob     []func(ctx context.Context, sha256 string, ext string, body []byte) error
+	LoadBlob      []func(ctx context.Context, sha256 string, ext string) (io.ReadSeeker, error)
+	DeleteBlob    []func(ctx context.Context, sha256 string, ext string) error
 	ReceiveReport []func(ctx context.Context, reportEvt *nostr.Event) error
-	RedirectGet   []func(ctx context.Context, sha256 string, fileExtension string) (url string, code int, err error)
+	RedirectGet   []func(ctx context.Context, sha256 string, ext string) (url string, code int, err error)
 
 	RejectUpload []func(ctx context.Context, auth *nostr.Event, size int, ext string) (bool, string, int)
-	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
+	RejectGet    []func(ctx context.Context, auth *nostr.Event, sha256 string, ext string) (bool, string, int)
 	RejectList   []func(ctx context.Context, auth *nostr.Event, pubkey string) (bool, string, int)
-	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string) (bool, string, int)
+	RejectDelete []func(ctx context.Context, auth *nostr.Event, sha256 string, ext string) (bool, string, int)
 }
 
 // ServerOption represents a functional option for configuring a BlossomServer

@@ -125,13 +125,17 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	hash := sha256.Sum256(b)
 	hhash := hex.EncodeToString(hash[:])
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
 
 	// keep track of the blob descriptor
 	bd := BlobDescriptor{
 		URL:      bs.ServiceURL + "/" + hhash + ext,
 		SHA256:   hhash,
 		Size:     len(b),
-		Type:     mime.TypeByExtension(ext),
+		Type:     mimeType,
 		Uploaded: nostr.Now(),
 	}
 	if err := bs.Store.Keep(r.Context(), bd, auth.PubKey); err != nil {
@@ -141,7 +145,7 @@ func (bs BlossomServer) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// save actual blob
 	for _, sb := range bs.StoreBlob {
-		if err := sb(r.Context(), hhash, b); err != nil {
+		if err := sb(r.Context(), hhash, ext, b); err != nil {
 			blossomError(w, "failed to save: "+err.Error(), 500)
 			return
 		}
@@ -182,17 +186,23 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var ext string
+	bd, err := bs.Store.Get(r.Context(), hhash)
+	if err != nil {
+		// can't find the blob, try to get the extension from the URL
+		if len(spl) == 2 {
+			ext = spl[1]
+		}
+	} else {
+		ext = getExtension(bd.Type)
+	}
+
 	for _, rg := range bs.RejectGet {
-		reject, reason, code := rg(r.Context(), auth, hhash)
+		reject, reason, code := rg(r.Context(), auth, hhash, ext)
 		if reject {
 			blossomError(w, reason, code)
 			return
 		}
-	}
-
-	var ext string
-	if len(spl) == 2 {
-		ext = spl[1]
 	}
 
 	if len(bs.RedirectGet) > 0 {
@@ -215,7 +225,7 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, lb := range bs.LoadBlob {
-		reader, _ := lb(r.Context(), hhash)
+		reader, _ := lb(r.Context(), hhash, ext)
 		if reader != nil {
 			// use unix epoch as the time if we can't find the descriptor
 			// as described in the http.ServeContent documentation
@@ -335,9 +345,20 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var ext string
+	bd, err := bs.Store.Get(r.Context(), hhash)
+	if err != nil {
+		// can't find the blob, try to get the extension from the URL
+		if len(spl) == 2 {
+			ext = spl[1]
+		}
+	} else {
+		ext = getExtension(bd.Type)
+	}
+
 	// should we accept this delete?
 	for _, rd := range bs.RejectDelete {
-		reject, reason, code := rd(r.Context(), auth, hhash)
+		reject, reason, code := rd(r.Context(), auth, hhash, ext)
 		if reject {
 			blossomError(w, reason, code)
 			return
@@ -353,7 +374,7 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	// we will actually only delete the file if no one else owns it
 	if bd, err := bs.Store.Get(r.Context(), hhash); err == nil && bd == nil {
 		for _, del := range bs.DeleteBlob {
-			if err := del(r.Context(), hhash); err != nil {
+			if err := del(r.Context(), hhash, ext); err != nil {
 				blossomError(w, "failed to delete blob: "+err.Error(), 500)
 				return
 			}
@@ -442,13 +463,12 @@ func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
 	// get content type and extension
 	var ext string
 	contentType := resp.Header.Get("Content-Type")
-	if contentType != "" {
+	if contentType != "" { // First try to get the extension from the Content-Type header
 		ext = getExtension(contentType)
-	} else {
-		// Try to detect from URL extension
-		if idx := strings.LastIndex(body.URL, "."); idx >= 0 {
-			ext = body.URL[idx:]
-		}
+	} else if ft, _ := magic.Lookup(b); ft != nil { // Else try to infer extension from the file content
+		ext = "." + ft.Extension
+	} else if idx := strings.LastIndex(body.URL, "."); idx >= 0 { // Else, try to get the extension from the URL
+		ext = body.URL[idx:]
 	}
 
 	// run reject hooks
@@ -477,7 +497,7 @@ func (bs BlossomServer) handleMirror(w http.ResponseWriter, r *http.Request) {
 
 	// store actual blob
 	for _, sb := range bs.StoreBlob {
-		if err := sb(r.Context(), hhash, b); err != nil {
+		if err := sb(r.Context(), hhash, ext, b); err != nil {
 			blossomError(w, "failed to save blob: "+err.Error(), 500)
 			return
 		}

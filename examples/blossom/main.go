@@ -31,11 +31,11 @@ func main() {
 	}
 	bl := blossom.New(relay, "http://localhost:3334")
 	bl.Store = blossom.EventStoreBlobIndexWrapper{Store: bdb, ServiceURL: bl.ServiceURL}
-	bl.StoreBlob = append(bl.StoreBlob, func(ctx context.Context, sha256 string, body []byte) error {
-		fmt.Println("storing", sha256, len(body))
+	bl.StoreBlob = append(bl.StoreBlob, func(ctx context.Context, sha256 string, ext string, body []byte) error {
+		fmt.Println("storing", sha256, ext, len(body))
 		return nil
 	})
-	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string) (io.ReadSeeker, error) {
+	bl.LoadBlob = append(bl.LoadBlob, func(ctx context.Context, sha256 string, ext string) (io.ReadSeeker, error) {
 		fmt.Println("loading", sha256)
 		blob := strings.NewReader("aaaaa")
 		return blob, nil
