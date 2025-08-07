@@ -189,11 +189,11 @@ func (bs BlossomServer) handleGetBlob(w http.ResponseWriter, r *http.Request) {
 	var ext string
 	bd, err := bs.Store.Get(r.Context(), hhash)
 	if err != nil {
-		// can't find the blob, try to get the extension from the URL
+		// can't find the BlobDescriptor, try to get the extension from the URL
 		if len(spl) == 2 {
 			ext = spl[1]
 		}
-	} else {
+	} else if bd != nil {
 		ext = getExtension(bd.Type)
 	}
 
@@ -348,11 +348,11 @@ func (bs BlossomServer) handleDelete(w http.ResponseWriter, r *http.Request) {
 	var ext string
 	bd, err := bs.Store.Get(r.Context(), hhash)
 	if err != nil {
-		// can't find the blob, try to get the extension from the URL
+		// can't find the BlobDescriptor, try to get the extension from the URL
 		if len(spl) == 2 {
 			ext = spl[1]
 		}
-	} else {
+	} else if bd != nil {
 		ext = getExtension(bd.Type)
 	}
 
