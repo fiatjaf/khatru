@@ -29,6 +29,18 @@ func EventPubKeyRateLimiter(tokensPerInterval int, interval time.Duration, maxTo
 	}
 }
 
+func EventAuthedPubKeyRateLimiter(tokensPerInterval int, interval time.Duration, maxTokens int) func(ctx context.Context, _ *nostr.Event) (reject bool, msg string) {
+	rl := startRateLimitSystem[string](tokensPerInterval, interval, maxTokens)
+
+	return func(ctx context.Context, _ *nostr.Event) (reject bool, msg string) {
+		user := khatru.GetAuthed(ctx)
+		if user == "" {
+			return false, ""
+		}
+		return rl(user), "rate-limited: slow down, please"
+	}
+}
+
 func ConnectionRateLimiter(tokensPerInterval int, interval time.Duration, maxTokens int) func(r *http.Request) bool {
 	rl := startRateLimitSystem[string](tokensPerInterval, interval, maxTokens)
 
