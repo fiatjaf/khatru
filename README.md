@@ -1,3 +1,11 @@
+<div>
+<p><b>This repository is in maintenance mode and adventurous programmers are encouraged to try <a href="https://pkg.go.dev/fiatjaf.com/nostr/khatru"><code>fiatjaf.com/nostr/khatru@master</code></a> instead.</b></p>
+
+<p>The core codebase and functionality are the same, but the API breaks a little bit (for good reason) and there are some new features.</p>
+</div>
+
+---
+
 # khatru, a relay framework [![docs badge](https://img.shields.io/badge/docs-reference-blue)](https://pkg.go.dev/github.com/fiatjaf/khatru#Relay)
 
 [![Run Tests](https://github.com/fiatjaf/khatru/actions/workflows/test.yml/badge.svg)](https://github.com/fiatjaf/khatru/actions/workflows/test.yml)
