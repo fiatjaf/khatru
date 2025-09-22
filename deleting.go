@@ -19,7 +19,7 @@ func (rl *Relay) handleDeleteRequest(ctx context.Context, evt *nostr.Event) erro
 			case "e":
 				f = nostr.Filter{IDs: []string{tag[1]}}
 			case "a":
-				spl := strings.Split(tag[1], ":")
+				spl := strings.SplitN(tag[1], ":", 3)
 				if len(spl) != 3 {
 					continue
 				}
