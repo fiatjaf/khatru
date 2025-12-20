@@ -37,7 +37,7 @@ func (rl *Relay) handleNormal(ctx context.Context, evt *nostr.Event) (skipBroadc
 	for _, query := range rl.QueryEvents {
 		ch, err := query(ctx, nostr.Filter{
 			Kinds: []int{5},
-			Tags:  nostr.TagMap{"#e": []string{evt.ID}},
+			Tags:  nostr.TagMap{"e": []string{evt.ID}},
 		})
 		if err != nil {
 			continue
@@ -78,7 +78,7 @@ func (rl *Relay) handleNormal(ctx context.Context, evt *nostr.Event) (skipBroadc
 			ch, err := query(ctx, nostr.Filter{
 				Kinds: []int{5},
 				Since: &evt.CreatedAt,
-				Tags:  nostr.TagMap{"#a": []string{address}},
+				Tags:  nostr.TagMap{"a": []string{address}},
 			})
 			if err != nil {
 				continue

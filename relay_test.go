@@ -2,8 +2,10 @@ package khatru
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -206,6 +208,180 @@ func TestBasicRelayFunctionality(t *testing.T) {
 				}
 			}
 		}
+	})
+
+	t.Run("multi-target deletion", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		expectDeleted := func(eventID string) {
+			t.Helper()
+			sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+				IDs: []string{eventID},
+			}})
+			if err != nil {
+				t.Fatalf("failed to subscribe: %v", err)
+			}
+			defer sub.Unsub()
+
+			gotEvent := false
+			for {
+				select {
+				case <-sub.Events:
+					gotEvent = true
+				case <-sub.EndOfStoredEvents:
+					if gotEvent {
+						t.Errorf("should not have received deleted event %s", eventID)
+					}
+					return
+				case <-ctx.Done():
+					t.Fatalf("timeout waiting for EOSE for %s", eventID)
+				}
+			}
+		}
+
+		evtA := createEvent(sk1, 1, "delete me A", nil)
+		evtB := createEvent(sk1, 1, "delete me B", nil)
+		if err := client1.Publish(ctx, evtA); err != nil {
+			t.Fatalf("failed to publish event A: %v", err)
+		}
+		if err := client1.Publish(ctx, evtB); err != nil {
+			t.Fatalf("failed to publish event B: %v", err)
+		}
+
+		delEvent := createEvent(sk1, 5, "multi delete", nostr.Tags{{"e", evtA.ID}, {"e", evtB.ID}})
+		if err := client1.Publish(ctx, delEvent); err != nil {
+			t.Fatalf("failed to publish deletion event: %v", err)
+		}
+
+		expectDeleted(evtA.ID)
+		expectDeleted(evtB.ID)
+	})
+
+	t.Run("missing-first-tag deletion", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		evt := createEvent(sk1, 1, "delete me after missing tag", nil)
+		if err := client1.Publish(ctx, evt); err != nil {
+			t.Fatalf("failed to publish event: %v", err)
+		}
+
+		delEvent := createEvent(sk1, 5, "missing first tag", nostr.Tags{{"e", "missing-id"}, {"e", evt.ID}})
+		if err := client1.Publish(ctx, delEvent); err != nil {
+			t.Fatalf("failed to publish deletion event: %v", err)
+		}
+
+		sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+			IDs: []string{evt.ID},
+		}})
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+		defer sub.Unsub()
+
+		gotEvent := false
+		for {
+			select {
+			case <-sub.Events:
+				gotEvent = true
+			case <-sub.EndOfStoredEvents:
+				if gotEvent {
+					t.Error("should not have received deleted event")
+				}
+				return
+			case <-ctx.Done():
+				t.Fatal("timeout waiting for EOSE")
+			}
+		}
+	})
+
+	t.Run("address-based deletion", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		identifier := "addr-1"
+		evt := createEvent(sk1, 30001, "addressable", nostr.Tags{{"d", identifier}})
+		if err := client1.Publish(ctx, evt); err != nil {
+			t.Fatalf("failed to publish addressable event: %v", err)
+		}
+
+		address := fmt.Sprintf("%d:%s:%s", evt.Kind, evt.PubKey, identifier)
+		delEvent := createEvent(sk1, 5, "delete address", nostr.Tags{{"a", address}})
+		if err := client1.Publish(ctx, delEvent); err != nil {
+			t.Fatalf("failed to publish deletion event: %v", err)
+		}
+
+		sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+			IDs: []string{evt.ID},
+		}})
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+		defer sub.Unsub()
+
+		gotEvent := false
+		for {
+			select {
+			case <-sub.Events:
+				gotEvent = true
+			case <-sub.EndOfStoredEvents:
+				if gotEvent {
+					t.Error("should not have received deleted event")
+				}
+				return
+			case <-ctx.Done():
+				t.Fatal("timeout waiting for EOSE")
+			}
+		}
+	})
+
+	t.Run("unauthorized multi-delete", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		expectPresent := func(eventID string) {
+			t.Helper()
+			sub, err := client2.Subscribe(ctx, []nostr.Filter{{
+				IDs: []string{eventID},
+			}})
+			if err != nil {
+				t.Fatalf("failed to subscribe: %v", err)
+			}
+			defer sub.Unsub()
+
+			select {
+			case env := <-sub.Events:
+				if env.ID != eventID {
+					t.Errorf("got wrong event: %v", env.ID)
+				}
+			case <-sub.EndOfStoredEvents:
+				t.Errorf("expected event %s to exist", eventID)
+			case <-ctx.Done():
+				t.Fatalf("timeout waiting for event %s", eventID)
+			}
+		}
+
+		evtOwned := createEvent(sk1, 1, "owned by sk1", nil)
+		evtOther := createEvent(sk2, 1, "owned by sk2", nil)
+		if err := client1.Publish(ctx, evtOwned); err != nil {
+			t.Fatalf("failed to publish owned event: %v", err)
+		}
+		if err := client2.Publish(ctx, evtOther); err != nil {
+			t.Fatalf("failed to publish other event: %v", err)
+		}
+
+		delEvent := createEvent(sk1, 5, "invalid multi delete", nostr.Tags{{"e", evtOwned.ID}, {"e", evtOther.ID}})
+		err := client1.Publish(ctx, delEvent)
+		if err == nil {
+			t.Fatal("should have failed to publish deletion event")
+		}
+		if !strings.Contains(err.Error(), "blocked:") {
+			t.Fatalf("expected blocked error, got: %v", err)
+		}
+
+		expectPresent(evtOwned.ID)
+		expectPresent(evtOther.ID)
 	})
 
 	// test 4: replaceable events
