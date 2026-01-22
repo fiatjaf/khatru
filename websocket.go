@@ -21,9 +21,9 @@ type WebSocket struct {
 	cancel  context.CancelFunc
 
 	// nip42
-	Challenge       string
-	AuthedPublicKey string
-	Authed          chan struct{}
+	Challenge        string
+	AuthedPublicKeys map[string]struct{}
+	Authed           chan struct{}
 
 	// nip77
 	negentropySessions *xsync.MapOf[string, *NegentropySession]

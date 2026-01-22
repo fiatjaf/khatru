@@ -31,14 +31,45 @@ func GetConnection(ctx context.Context) *WebSocket {
 	return nil
 }
 
+// GetAuthed returns the first authenticated pubkey (for backward compatibility).
+// Returns the nip86 header auth pubkey if present, otherwise the first pubkey from the WebSocket auth set.
 func GetAuthed(ctx context.Context) string {
-	if conn := GetConnection(ctx); conn != nil {
-		return conn.AuthedPublicKey
-	}
 	if nip86Auth := ctx.Value(nip86HeaderAuthKey); nip86Auth != nil {
 		return nip86Auth.(string)
 	}
+	if conn := GetConnection(ctx); conn != nil && conn.AuthedPublicKeys != nil {
+		for pubkey := range conn.AuthedPublicKeys {
+			return pubkey
+		}
+	}
 	return ""
+}
+
+// IsAuthed checks if a specific pubkey is authenticated on this connection.
+func IsAuthed(ctx context.Context, pubkey string) bool {
+	if nip86Auth := ctx.Value(nip86HeaderAuthKey); nip86Auth != nil {
+		return nip86Auth.(string) == pubkey
+	}
+	if conn := GetConnection(ctx); conn != nil && conn.AuthedPublicKeys != nil {
+		_, exists := conn.AuthedPublicKeys[pubkey]
+		return exists
+	}
+	return false
+}
+
+// GetAuthedKeys returns all authenticated pubkeys for this connection.
+func GetAuthedKeys(ctx context.Context) []string {
+	if nip86Auth := ctx.Value(nip86HeaderAuthKey); nip86Auth != nil {
+		return []string{nip86Auth.(string)}
+	}
+	if conn := GetConnection(ctx); conn != nil && conn.AuthedPublicKeys != nil {
+		keys := make([]string, 0, len(conn.AuthedPublicKeys))
+		for pubkey := range conn.AuthedPublicKeys {
+			keys = append(keys, pubkey)
+		}
+		return keys
+	}
+	return nil
 }
 
 // IsInternalCall returns true when a call to QueryEvents, for example, is being made because of a deletion

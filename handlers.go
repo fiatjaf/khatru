@@ -179,8 +179,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 					// check NIP-70 protected
 					if nip70.IsProtected(env.Event) {
-						authed := GetAuthed(ctx)
-						if authed == "" {
+						if GetAuthed(ctx) == "" {
 							RequestAuth(ctx)
 							ws.WriteJSON(nostr.OKEnvelope{
 								EventID: env.Event.ID,
@@ -188,7 +187,7 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 								Reason:  "auth-required: must be published by authenticated event author",
 							})
 							return
-						} else if authed != env.Event.PubKey {
+						} else if !IsAuthed(ctx, env.Event.PubKey) {
 							ws.WriteJSON(nostr.OKEnvelope{
 								EventID: env.Event.ID,
 								OK:      false,
@@ -328,8 +327,11 @@ func (rl *Relay) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 				case *nostr.AuthEnvelope:
 					wsBaseUrl := strings.Replace(rl.getBaseURL(r), "http", "ws", 1)
 					if pubkey, ok := nip42.ValidateAuthEvent(&env.Event, ws.Challenge, wsBaseUrl); ok {
-						ws.AuthedPublicKey = pubkey
 						ws.authLock.Lock()
+						if ws.AuthedPublicKeys == nil {
+							ws.AuthedPublicKeys = make(map[string]struct{})
+						}
+						ws.AuthedPublicKeys[pubkey] = struct{}{}
 						if ws.Authed != nil {
 							close(ws.Authed)
 							ws.Authed = nil
